@@ -1,0 +1,5 @@
+{
+  "$schema": "./src/config.schema.json",
+  "prefix": "api",
+  "routePath": "app/routes"
+}

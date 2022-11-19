@@ -1,6 +1,6 @@
-import { ApiConfig } from '../../src/api-config';
+import { ApiConfig } from '../../../../src/api-config.js';
 
 export default {
   host: 'jsonplaceholder.typicode.com',
-  path: 'todos/:id',
+  path: 'todos',
 } satisfies ApiConfig;

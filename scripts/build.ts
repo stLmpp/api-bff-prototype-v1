@@ -22,6 +22,7 @@ async function main(): Promise<void> {
     platform: 'node',
     outdir: 'dist',
     format: 'esm',
+    watch: true,
   });
 }
 

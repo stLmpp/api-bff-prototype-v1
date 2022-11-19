@@ -1,18 +1,30 @@
 import { z } from 'zod';
 
-const ApiConfigSchemaParam = z.union([
-  z.record(z.union([z.string(), z.function()])),
-  z.function(),
-]);
+const ApiConfigSchemaParam = z.record(
+  z.union([
+    z.string(),
+    z.function().args(z.string().optional()).returns(z.string()),
+  ])
+);
 
 const ApiConfigSchemaMappingInOut = z.object({
-  body: ApiConfigSchemaParam.optional(),
+  body: z
+    .union([z.record(z.union([z.string(), z.function()])), z.function()])
+    .optional(),
   query: ApiConfigSchemaParam.optional(),
   params: ApiConfigSchemaParam.optional(),
-  headers: ApiConfigSchemaParam.optional(),
+  headers: z
+    .record(
+      z.union([
+        z.literal('forward'),
+        z.string(),
+        z.function().returns(z.string()),
+      ])
+    )
+    .optional(),
 });
 
-const ApiConfigSchema = z.object({
+export const ApiConfigSchema = z.object({
   host: z.string(),
   path: z.string(),
   mapping: z
@@ -46,3 +58,15 @@ const ApiConfigSchema = z.object({
 });
 
 export type ApiConfig = z.infer<typeof ApiConfigSchema>;
+
+export function env(path: string): () => string | undefined {
+  return () => process.env[path];
+}
+
+export function fixed(value: any): () => string {
+  return () => String(value);
+}
+
+export function forward(): 'forward' {
+  return 'forward';
+}

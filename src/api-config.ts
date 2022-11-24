@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const ApiConfigSchemaParam = z.record(
   z.union([
+    z.literal('forward'),
     z.string(),
     z.function().args(z.string().optional()).returns(z.string()),
   ])
@@ -9,19 +10,18 @@ const ApiConfigSchemaParam = z.record(
 
 const ApiConfigSchemaMappingInOut = z.object({
   body: z
-    .union([z.record(z.union([z.string(), z.function()])), z.function()])
+    .union([
+      z.record(z.union([z.string(), z.function()])),
+      z.function().args(z.any()).returns(z.any()),
+    ])
     .optional(),
   query: ApiConfigSchemaParam.optional(),
   params: ApiConfigSchemaParam.optional(),
-  headers: z
-    .record(
-      z.union([
-        z.literal('forward'),
-        z.string(),
-        z.function().returns(z.string()),
-      ])
-    )
-    .optional(),
+  headers: z.union([
+    z.literal('forward'),
+    z.string(),
+    z.function().args(z.string().optional()).returns(z.string()),
+  ]),
 });
 
 export const ApiConfigSchema = z.object({

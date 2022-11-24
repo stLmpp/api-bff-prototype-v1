@@ -49,8 +49,8 @@ export async function initApiConfig(
           for (const [key, value] of Object.entries(headersMapping)) {
             if (typeof value === 'function') {
               headers[key] = value();
-            } else if (value === 'forward') {
-              const header = req.header(key);
+            } else {
+              const header = req.header(value === 'forward' ? key : value);
               if (header) {
                 headers[key] = header;
               }

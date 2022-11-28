@@ -11,17 +11,23 @@ const ApiConfigSchemaParam = z.record(
 const ApiConfigSchemaMappingInOut = z.object({
   body: z
     .union([
-      z.record(z.union([z.string(), z.function()])),
+      z.record(
+        z.union([z.string(), z.function().args(z.any()).returns(z.any())])
+      ),
       z.function().args(z.any()).returns(z.any()),
     ])
     .optional(),
   query: ApiConfigSchemaParam.optional(),
   params: ApiConfigSchemaParam.optional(),
-  headers: z.union([
-    z.literal('forward'),
-    z.string(),
-    z.function().args(z.string().optional()).returns(z.string()),
-  ]),
+  headers: z
+    .record(
+      z.union([
+        z.literal('forward'),
+        z.string(),
+        z.function().args().returns(z.string()),
+      ])
+    )
+    .optional(),
 });
 
 export const ApiConfigSchema = z.object({

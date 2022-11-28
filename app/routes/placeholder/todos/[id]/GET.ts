@@ -9,6 +9,11 @@ export default {
         'x-api-bff': fixed(true),
         authorization: forward(),
       },
+      query: {
+        'teste': forward(),
+        'teste2': fixed('fixed value'),
+        'teste3': 'from-another',
+      },
     },
   },
 } satisfies ApiConfig;

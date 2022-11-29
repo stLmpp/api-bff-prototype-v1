@@ -9,6 +9,6 @@
     "strict": true,
     "skipLibCheck": true,
     "useUnknownInCatchVariables": false,
-    "types": ["src/global.d.ts"]
+    "typeRoots": ["node_modules/@types", "src/types/global.d.ts"]
   }
 }

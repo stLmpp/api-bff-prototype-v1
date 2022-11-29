@@ -1,5 +1,0 @@
-{
-  "verbose": true,
-  "watch": ["dist"],
-  "ignore": ["node_modules", "src"]
-}

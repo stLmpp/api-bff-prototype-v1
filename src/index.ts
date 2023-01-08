@@ -17,7 +17,7 @@ const EXTENSION = PROD ? 'js' : 'ts';
 
 export async function initApiConfig(
   path: string
-): Promise<[string, RequestHandler]> {
+): Promise<[string, RequestHandler, { method: string }]> {
   const [, , ...reqPath] = path
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
@@ -105,6 +105,19 @@ export async function initApiConfig(
         const paramValue = params[paramKeyParsed];
         newPathName = newPathName.replace(paramKey, paramValue);
       }
+      const remainingParams = newPathName
+        .split('/')
+        .filter((param) => param.startsWith(':'))
+        .map((param) => param.replace(/^:/, ''));
+      if (remainingParams.length) {
+        badRequestErrors.push(
+          ...remainingParams.map((param) => ({
+            path: param,
+            message: `${param} is required`,
+            type: 'params' as const,
+          }))
+        );
+      }
       const requestOptions: RequestInit = {
         method: req.method,
         headers,
@@ -152,6 +165,7 @@ export async function initApiConfig(
       const data = await response.json();
       res.status(200).send(data);
     },
+    { method },
   ];
 }
 
@@ -168,8 +182,10 @@ export async function initApp(): Promise<Express> {
   const middlewaresSorted = [...middlewares].sort(
     ([endPointA], [endPointB]) => endPointB.length - endPointA.length
   );
-  for (const [endPoint, handler] of middlewaresSorted) {
-    console.log(`Registering end-point: ${endPoint}`);
+  for (const [endPoint, handler, meta] of middlewaresSorted) {
+    console.log(
+      `Registering end-point: [${meta.method.toUpperCase()}] ${endPoint}`
+    );
     server.use(endPoint, handler);
   }
   return server;

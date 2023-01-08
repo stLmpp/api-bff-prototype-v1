@@ -6,20 +6,33 @@ import {
 } from './api-config.js';
 
 type MapParamsType = 'params' | 'query' | 'headers' | 'body';
+
+export async function mapParams(
+  type: 'params' | 'query' | 'headers',
+  mapping: ApiConfigSchemaMappingParam | undefined,
+  req: Request
+): Promise<Record<string, string>>;
+export async function mapParams<T>(
+  type: 'body',
+  mapping: ApiConfigSchemaMappingBody | undefined,
+  req: Request
+): Promise<T | undefined>;
 export async function mapParams(
   type: MapParamsType,
   mapping: ApiConfigSchemaMappingParam | ApiConfigSchemaMappingBody | undefined,
   req: Request
-): Promise<any> {
+): Promise<Record<string, string> | any> {
+  const isParamType = type !== 'body';
   if (!mapping) {
-    return;
+    return isParamType ? {} : undefined;
   }
   const reqData = req[type] ?? {};
   if (typeof mapping === 'function') {
     return mapping(reqData, req);
   }
-  const resolveValueFinal =
-    type === 'body' ? (value: any) => value : (value: any) => String(value);
+  const resolveValueFinal = !isParamType
+    ? (value: any) => value
+    : (value: any) => String(value);
   const entries = Object.entries(mapping);
   const finalResult: Record<string, unknown> = {};
   const promises: Promise<any>[] = [];

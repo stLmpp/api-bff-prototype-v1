@@ -50,6 +50,27 @@ const ApiConfigSchemaMappingInOut = z.object({
   headers: ApiConfigSchemaMappingParam.optional(),
 });
 
+const ApiConfigSchemaOpenapiSafeParseUnion = z.discriminatedUnion('success', [
+  z.object({
+    success: z.literal(true),
+    data: z.any(),
+  }),
+  z.object({
+    success: z.literal(false),
+    error: z.any(),
+  }),
+]);
+const ApiConfigSchemaOpenapiParams = z.object({
+  safeParse: z
+    .function()
+    .args(z.any(), z.any().optional())
+    .returns(ApiConfigSchemaOpenapiSafeParseUnion),
+  safeParseAsync: z
+    .function()
+    .args(z.any(), z.any().optional())
+    .returns(z.promise(ApiConfigSchemaOpenapiSafeParseUnion)),
+});
+
 export const ApiConfigSchema = z.object({
   host: z.string(),
   path: z.string(),
@@ -65,18 +86,18 @@ export const ApiConfigSchema = z.object({
       description: z.string().optional(),
       request: z
         .object({
-          body: z.any().optional(),
-          query: z.record(z.string()).optional(),
-          parmas: z.record(z.string()).optional(),
-          headers: z.record(z.string()).optional(),
+          body: ApiConfigSchemaOpenapiParams.optional(),
+          query: ApiConfigSchemaOpenapiParams.optional(),
+          params: ApiConfigSchemaOpenapiParams.optional(),
+          headers: ApiConfigSchemaOpenapiParams.optional(),
         })
         .optional(),
       response: z
         .object({
-          body: z.any().optional(),
-          query: z.record(z.string()).optional(),
-          parmas: z.record(z.string()).optional(),
-          headers: z.record(z.string()).optional(),
+          body: ApiConfigSchemaOpenapiParams.optional(),
+          query: ApiConfigSchemaOpenapiParams.optional(),
+          params: ApiConfigSchemaOpenapiParams.optional(),
+          headers: ApiConfigSchemaOpenapiParams.optional(),
         })
         .optional(),
     })

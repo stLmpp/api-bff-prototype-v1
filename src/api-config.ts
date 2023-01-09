@@ -2,6 +2,7 @@ import { Request } from 'express';
 import { z } from 'zod';
 
 import { ConfigCachingSchema } from './config';
+import { ParamType } from './param-type';
 
 const ZRequest: z.ZodType<Request> = z.any();
 
@@ -130,7 +131,7 @@ export function fromBody(
 }
 
 function _fromParam(
-  type: 'params' | 'query' | 'headers',
+  type: Exclude<ParamType, 'body'>,
   param: string | ((params: Record<string, string>) => string | undefined)
 ): (_: any, req: Request) => string | undefined {
   const resolver =

@@ -2,6 +2,7 @@ import { ConfigCachingType } from '../config';
 
 import { CachingStrategy } from './caching-strategy';
 import { MemoryCaching } from './memory-caching';
+import { PersistentCaching } from './persistent-caching';
 
 export class CachingResolver {
   private static readonly _cachedCaching = new Map<
@@ -20,8 +21,12 @@ export class CachingResolver {
         return strategy;
       },
       persistent: () => {
-        // TODO implement
-        throw new Error('Not implemented');
+        let strategy = this._cachedCaching.get(key);
+        if (!strategy) {
+          strategy = new PersistentCaching();
+          this._cachedCaching.set(key, strategy);
+        }
+        return strategy;
       },
     } satisfies Record<ConfigCachingType, () => CachingStrategy>;
     return map[key]();

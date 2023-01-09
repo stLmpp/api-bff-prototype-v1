@@ -3,7 +3,7 @@
   "prefix": "api",
   "routePath": "app/routes",
   "caching": {
-    "type": "memory",
+    "type": "persistent",
     "ttl": 15000
   }
 }

@@ -39,7 +39,7 @@ module.exports = {
       'single',
       { allowTemplateLiterals: true, avoidEscape: true },
     ],
-    'no-console': ['error'],
+    'no-console': ['warn'],
     curly: ['error', 'multi-line'],
     'no-useless-constructor': ['off'],
     'comma-dangle': [

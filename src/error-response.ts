@@ -1,14 +1,11 @@
 import { z } from 'zod';
 
+import { ParamTypeSchema } from './param-type';
+
 const ErrorResponseErrorObjectSchema = z.object({
   path: z.string(),
   message: z.string(),
-  type: z.union([
-    z.literal('body'),
-    z.literal('params'),
-    z.literal('headers'),
-    z.literal('query'),
-  ]),
+  type: ParamTypeSchema,
 });
 
 export const ErrorResponseSchema = z.object({

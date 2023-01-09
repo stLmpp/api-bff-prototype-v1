@@ -1,15 +1,10 @@
 import { ConfigCaching } from '../config';
 
+import { CachingData } from './caching-data';
 import { CachingStrategy } from './caching-strategy';
 
 export class MemoryCaching implements CachingStrategy {
-  private readonly _cache = new Map<
-    string,
-    {
-      value: unknown;
-      expiry: number | null;
-    }
-  >();
+  private readonly _cache = new Map<string, CachingData>();
 
   async get(key: string, { ttl }: ConfigCaching): Promise<unknown | undefined> {
     const cached = this._cache.get(key);

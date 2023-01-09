@@ -4,13 +4,14 @@ import compression from 'compression';
 import express, { Express, json, RequestHandler } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
-import { SafeParseReturnType } from 'zod';
+import { SafeParseReturnType, ZodSchema } from 'zod';
 
 import { ApiConfigSchema } from './api-config.js';
 import { CachingResolver } from './caching/caching-resolver';
 import { ConfigCaching, getConfig } from './config.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response';
 import { mapParams } from './map-params.js';
+import { validateParams } from './validate-params';
 
 (globalThis as any).PROD ??= false;
 
@@ -59,50 +60,20 @@ export async function initApiConfig(
       ]);
       let newPathName = pathname;
       const badRequestErrors: ErrorResponseErrorObject[] = [];
-      const headerZodSchema = openapi?.request?.headers;
-      if (headerZodSchema) {
-        const parsedHeaders = (await headerZodSchema.safeParseAsync(
-          headers,
-          undefined
-        )) as SafeParseReturnType<any, any>;
-        if (!parsedHeaders.success) {
-          const messages = parsedHeaders.error.errors.map((error) => ({
-            path: error.path.join('.'),
-            message: error.message,
-            type: 'headers',
-          })) satisfies ErrorResponseErrorObject[];
-          badRequestErrors.push(...messages);
-        }
+      const headerSchema = openapi?.request?.headers as ZodSchema | undefined;
+      if (headerSchema) {
+        const errors = await validateParams(headerSchema, headers, 'headers');
+        badRequestErrors.push(...errors);
       }
-      const queryZodSchema = openapi?.request?.query;
-      if (queryZodSchema) {
-        const parsedQuery = (await queryZodSchema.safeParseAsync(
-          query,
-          undefined
-        )) as SafeParseReturnType<any, any>;
-        if (!parsedQuery.success) {
-          const messages = parsedQuery.error.errors.map((error) => ({
-            path: error.path.join('.'),
-            message: error.message,
-            type: 'query',
-          })) satisfies ErrorResponseErrorObject[];
-          badRequestErrors.push(...messages);
-        }
+      const querySchema = openapi?.request?.query as ZodSchema | undefined;
+      if (querySchema) {
+        const errors = await validateParams(querySchema, query, 'query');
+        badRequestErrors.push(...errors);
       }
-      const paramsZodSchema = openapi?.request?.params;
-      if (paramsZodSchema) {
-        const parsedParams = (await paramsZodSchema.safeParseAsync(
-          params,
-          undefined
-        )) as SafeParseReturnType<any, any>;
-        if (!parsedParams.success) {
-          const messages = parsedParams.error.errors.map((error) => ({
-            path: error.path.join('.'),
-            message: error.message,
-            type: 'params',
-          })) satisfies ErrorResponseErrorObject[];
-          badRequestErrors.push(...messages);
-        }
+      const paramsSchema = openapi?.request?.params as ZodSchema | undefined;
+      if (paramsSchema) {
+        const errors = await validateParams(paramsSchema, params, 'params');
+        badRequestErrors.push(...errors);
       }
       for (const paramKey of endPoint.split('/')) {
         if (!paramKey.startsWith(':')) {
@@ -110,20 +81,14 @@ export async function initApiConfig(
         }
         const paramKeyParsed = paramKey.replace(/^:/, '');
         const paramValue = params[paramKeyParsed];
+        if (paramValue == null) {
+          badRequestErrors.push({
+            path: paramKeyParsed,
+            message: `${paramKeyParsed} is required`,
+            type: 'params',
+          });
+        }
         newPathName = newPathName.replace(paramKey, paramValue);
-      }
-      const remainingParams = newPathName
-        .split('/')
-        .filter((param) => param.startsWith(':'))
-        .map((param) => param.replace(/^:/, ''));
-      if (remainingParams.length) {
-        badRequestErrors.push(
-          ...remainingParams.map((param) => ({
-            path: param,
-            message: `${param} is required`,
-            type: 'params' as const,
-          }))
-        );
       }
       const requestOptions: RequestInit = {
         method: req.method,
@@ -182,21 +147,23 @@ export async function initApiConfig(
           : { type: 'memory', path: '' }
       ) satisfies ConfigCaching;
       let cacheUsed = false;
+      const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
+        authorization: headers.authorization,
+      })}`;
+      const cachingStrategy = CachingResolver.getCachingStrategy(
+        newCaching.type!
+      );
       if (shouldCache) {
-        const cachingStrategy = CachingResolver.getCachingStrategy(
-          newCaching.type!
-        );
-        const cacheKey = url.toString();
         const cachedValue = await cachingStrategy
           .get(cacheKey, newCaching)
           .catch(() => null);
-        console.log({ cachedValue });
         if (cachedValue != null) {
           console.log('Using cached value');
           res.status(200).send(cachedValue);
           cacheUsed = true;
         }
       }
+      // TODO use a library to fetch data
       const response = await fetch(url, requestOptions);
       if (!response.ok) {
         if (cacheUsed) {
@@ -211,12 +178,8 @@ export async function initApiConfig(
       }
       const data = await response.json();
       if (shouldCache) {
-        const cachingStrategy = CachingResolver.getCachingStrategy(
-          newCaching.type!
-        );
-        const cacheKey = url.toString();
         cachingStrategy.set(cacheKey, data, newCaching).catch(() => null);
-        console.log('cached');
+        console.log('New value cached');
       }
       if (cacheUsed) {
         return;

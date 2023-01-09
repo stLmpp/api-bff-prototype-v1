@@ -4,12 +4,16 @@ import compression from 'compression';
 import express, { Express, json, RequestHandler } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
+import { StatusCodes } from 'http-status-codes';
 import { SafeParseReturnType, ZodSchema } from 'zod';
 
 import { ApiConfigSchema } from './api-config.js';
 import { CachingResolver } from './caching/caching-resolver.js';
-import { ConfigCaching, getConfig } from './config.js';
+import { ConfigCaching, ConfigCachingPathSchema, getConfig } from './config.js';
+import { ErrorCodes } from './error-codes.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
+import { internalConfiguration } from './internal-configuration.js';
+import { lastConfiguration } from './last-configuration.js';
 import { mapParams } from './map-params.js';
 import { validateParams } from './validate-params.js';
 
@@ -115,12 +119,12 @@ export async function initApiConfig(
       }
       if (badRequestErrors.length) {
         const errorResponse = {
-          status: 400,
+          status: StatusCodes.BAD_REQUEST,
           errors: badRequestErrors,
           message: 'Bad request',
-          code: '400',
+          code: ErrorCodes.BadRequest,
         } satisfies ErrorResponse;
-        res.status(400).send(errorResponse);
+        res.status(StatusCodes.BAD_REQUEST).send(errorResponse);
         return;
       }
       const urlSearchParams = new URLSearchParams(query);
@@ -142,7 +146,7 @@ export async function initApiConfig(
         hasCachingConfig
           ? {
               type: caching?.type ?? globalConfig.caching?.type ?? 'memory',
-              path: caching?.path ?? globalConfig.caching?.path ?? '__caching',
+              path: ConfigCachingPathSchema.parse(globalConfig.caching?.path),
               ttl: caching?.ttl ?? globalConfig.caching?.ttl,
             }
           : { type: 'memory', path: '' }
@@ -160,7 +164,7 @@ export async function initApiConfig(
           .catch(() => null);
         if (cachedValue != null) {
           console.log('Using cached value');
-          res.status(200).send(cachedValue);
+          res.status(StatusCodes.OK).send(cachedValue);
           cacheUsed = true;
         }
       }
@@ -185,7 +189,7 @@ export async function initApiConfig(
       if (cacheUsed) {
         return;
       }
-      res.status(200).send(data);
+      res.status(StatusCodes.OK).send(data);
     },
     { method },
   ];
@@ -210,5 +214,6 @@ export async function initApp(): Promise<Express> {
     );
     server.use(endPoint, handler);
   }
-  return server;
+  await internalConfiguration(server);
+  return lastConfiguration(server);
 }

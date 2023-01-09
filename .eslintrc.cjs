@@ -170,6 +170,7 @@ module.exports = {
       },
     ],
     'import/newline-after-import': ['error'],
+    '@typescript-eslint/no-magic-numbers': ['error']
   },
   settings: {
     'import/resolver': {

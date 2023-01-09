@@ -12,9 +12,14 @@ const ConfigCachingTypeSchema = z.union([
 
 export type ConfigCachingType = z.infer<typeof ConfigCachingTypeSchema>;
 
+export const ConfigCachingPathSchema = z
+  .string()
+  .optional()
+  .default('__caching');
+
 export const ConfigCachingSchema = z.object({
   type: ConfigCachingTypeSchema,
-  path: z.string().optional().default('__caching'),
+  path: ConfigCachingPathSchema,
   ttl: z.number().optional(),
 });
 

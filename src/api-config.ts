@@ -105,7 +105,9 @@ export const ApiConfigSchema = z.object({
         .optional(),
     })
     .optional(),
-  caching: z.union([ConfigCachingSchema, z.literal(false)]).optional(),
+  caching: z
+    .union([ConfigCachingSchema.omit({ path: true }), z.literal(false)])
+    .optional(),
 });
 
 export type ApiConfig = z.infer<typeof ApiConfigSchema>;

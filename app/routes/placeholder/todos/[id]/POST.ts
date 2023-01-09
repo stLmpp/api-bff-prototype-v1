@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { ApiConfig, forward } from '../../../../../src/api-config';
 
+const MIN_ARRAY = 1;
+
 export default {
   host: 'jsonplaceholder.typicode.com',
   path: 'todos/:id',
@@ -28,7 +30,7 @@ export default {
               id: z.string(),
             })
           )
-          .min(1),
+          .min(MIN_ARRAY),
       }),
       params: z.object({
         id: z.string(),

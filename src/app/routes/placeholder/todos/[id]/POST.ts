@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ApiConfig, forward } from '../../../../../src/api-config.js';
+import { ApiConfig, forward } from '../../../../../api-config.js';
 
 const MIN_ARRAY = 1;
 

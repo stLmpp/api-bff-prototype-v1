@@ -1,4 +1,4 @@
-import { initApp } from '../src/index.js';
+import { initApp } from '../index.js';
 
 initApp().then((server) => {
   console.log('Listening on http://localhost:3000');

@@ -28,7 +28,6 @@ export async function initApiConfig(
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
   const method = reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '');
-  console.log({ path, meta: import.meta.url });
   const file = await import(join('file://', process.cwd(), path));
   const apiConfig = file.default;
   if (!apiConfig) {

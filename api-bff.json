@@ -1,7 +1,6 @@
 {
   "$schema": "./src/config.schema.json",
   "prefix": "api",
-  "routePath": "app/routes",
   "caching": {
     "type": "persistent",
     "ttl": 15000

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsx scripts/build.ts",
-    "start": "tsx watch app/main.ts"
+    "start": "tsx watch src/app/main.ts"
   },
   "keywords": [],
   "author": "",

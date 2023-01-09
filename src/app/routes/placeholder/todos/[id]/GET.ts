@@ -4,7 +4,7 @@ import {
   forward,
   fromHeader,
   fromQuery,
-} from '../../../../../src/api-config.js';
+} from '../../../../../api-config.js';
 
 export default {
   host: 'jsonplaceholder.typicode.com',

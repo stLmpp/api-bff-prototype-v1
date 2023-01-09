@@ -1,4 +1,4 @@
-import { ConfigCaching } from '../config';
+import { ConfigCaching } from '../config.js';
 
 export interface CachingStrategy {
   get(key: string, options: ConfigCaching): Promise<unknown>;

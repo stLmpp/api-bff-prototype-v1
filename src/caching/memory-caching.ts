@@ -1,7 +1,7 @@
-import { ConfigCaching } from '../config';
+import { ConfigCaching } from '../config.js';
 
-import { CachingData } from './caching-data';
-import { CachingStrategy } from './caching-strategy';
+import { CachingData } from './caching-data.js';
+import { CachingStrategy } from './caching-strategy.js';
 
 export class MemoryCaching implements CachingStrategy {
   private readonly _cache = new Map<string, CachingData>();

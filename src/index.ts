@@ -7,11 +7,11 @@ import helmet from 'helmet';
 import { SafeParseReturnType, ZodSchema } from 'zod';
 
 import { ApiConfigSchema } from './api-config.js';
-import { CachingResolver } from './caching/caching-resolver';
+import { CachingResolver } from './caching/caching-resolver.js';
 import { ConfigCaching, getConfig } from './config.js';
-import { ErrorResponse, ErrorResponseErrorObject } from './error-response';
+import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
 import { mapParams } from './map-params.js';
-import { validateParams } from './validate-params';
+import { validateParams } from './validate-params.js';
 
 (globalThis as any).PROD ??= false;
 
@@ -24,6 +24,7 @@ export async function initApiConfig(
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
   const method = reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '');
+  console.log({ path, meta: import.meta.url });
   const file = await import(join('file://', process.cwd(), path));
   const apiConfig = file.default;
   if (!apiConfig) {

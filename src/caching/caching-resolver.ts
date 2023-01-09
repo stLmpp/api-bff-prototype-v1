@@ -1,8 +1,8 @@
-import { ConfigCachingType } from '../config';
+import { ConfigCachingType } from '../config.js';
 
-import { CachingStrategy } from './caching-strategy';
-import { MemoryCaching } from './memory-caching';
-import { PersistentCaching } from './persistent-caching';
+import { CachingStrategy } from './caching-strategy.js';
+import { MemoryCaching } from './memory-caching.js';
+import { PersistentCaching } from './persistent-caching.js';
 
 export class CachingResolver {
   private static readonly _cachedCaching = new Map<

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ParamTypeSchema } from './param-type';
+import { ParamTypeSchema } from './param-type.js';
 
 const ErrorResponseErrorObjectSchema = z.object({
   path: z.string(),

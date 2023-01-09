@@ -1,8 +1,8 @@
 import { Request } from 'express';
 import { z } from 'zod';
 
-import { ConfigCachingSchema } from './config';
-import { ParamType } from './param-type';
+import { ConfigCachingSchema } from './config.js';
+import { ParamType } from './param-type.js';
 
 const ZRequest: z.ZodType<Request> = z.any();
 

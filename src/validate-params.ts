@@ -1,7 +1,7 @@
 import { SafeParseReturnType, ZodSchema } from 'zod';
 
-import { ErrorResponseErrorObject } from './error-response';
-import { ParamType } from './param-type';
+import { ErrorResponseErrorObject } from './error-response.js';
+import { ParamType } from './param-type.js';
 
 export async function validateParams(
   headerZodSchema: ZodSchema,

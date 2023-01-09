@@ -7,7 +7,8 @@ import helmet from 'helmet';
 import { SafeParseReturnType } from 'zod';
 
 import { ApiConfigSchema } from './api-config.js';
-import { getConfig } from './config.js';
+import { CachingResolver } from './caching/caching-resolver';
+import { ConfigCaching, getConfig } from './config.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response';
 import { mapParams } from './map-params.js';
 
@@ -32,7 +33,13 @@ export async function initApiConfig(
     // TODO better error message
     throw new Error(`File ${path} does not contain valid configuration`);
   }
-  const { host, path: pathname, mapping, openapi } = parsedApiConfig.data;
+  const {
+    host,
+    path: pathname,
+    mapping,
+    openapi,
+    caching,
+  } = parsedApiConfig.data;
   const endPoint = `/${reqPath.join('/')}`;
   return [
     endPoint,
@@ -161,8 +168,59 @@ export async function initApiConfig(
         query,
         params,
       });
+      const globalConfig = await getConfig();
+      const hasCachingConfig =
+        caching !== false && (!!globalConfig.caching || !!caching);
+      const shouldCache = method.toLowerCase() === 'get' && hasCachingConfig;
+      const newCaching = (
+        hasCachingConfig
+          ? {
+              type: caching?.type ?? globalConfig.caching?.type ?? 'memory',
+              path: caching?.path ?? globalConfig.caching?.path ?? '__caching',
+              ttl: caching?.ttl ?? globalConfig.caching?.ttl,
+            }
+          : { type: 'memory', path: '' }
+      ) satisfies ConfigCaching;
+      let cacheUsed = false;
+      if (shouldCache) {
+        const cachingStrategy = CachingResolver.getCachingStrategy(
+          newCaching.type!
+        );
+        const cacheKey = url.toString();
+        const cachedValue = await cachingStrategy
+          .get(cacheKey, newCaching)
+          .catch(() => null);
+        console.log({ cachedValue });
+        if (cachedValue != null) {
+          console.log('Using cached value');
+          res.status(200).send(cachedValue);
+          cacheUsed = true;
+        }
+      }
       const response = await fetch(url, requestOptions);
+      if (!response.ok) {
+        if (cacheUsed) {
+          return;
+        }
+        res
+          .status(response.status)
+          .send(
+            (await response.json().catch(() => null)) ?? (await response.text())
+          );
+        return;
+      }
       const data = await response.json();
+      if (shouldCache) {
+        const cachingStrategy = CachingResolver.getCachingStrategy(
+          newCaching.type!
+        );
+        const cacheKey = url.toString();
+        cachingStrategy.set(cacheKey, data, newCaching).catch(() => null);
+        console.log('cached');
+      }
+      if (cacheUsed) {
+        return;
+      }
       res.status(200).send(data);
     },
     { method },

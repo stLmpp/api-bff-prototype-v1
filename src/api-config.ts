@@ -1,6 +1,8 @@
 import { Request } from 'express';
 import { z } from 'zod';
 
+import { ConfigCachingSchema } from './config';
+
 const ZRequest: z.ZodType<Request> = z.any();
 
 const ApiConfigSchemaMappingParam = z.union([
@@ -102,6 +104,7 @@ export const ApiConfigSchema = z.object({
         .optional(),
     })
     .optional(),
+  caching: z.union([ConfigCachingSchema, z.literal(false)]).optional(),
 });
 
 export type ApiConfig = z.infer<typeof ApiConfigSchema>;

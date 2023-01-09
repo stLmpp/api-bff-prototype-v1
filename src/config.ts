@@ -5,9 +5,25 @@ import fastGlob from 'fast-glob';
 import { parse } from 'yaml';
 import { z } from 'zod';
 
+const ConfigCachingTypeSchema = z.union([
+  z.literal('memory'),
+  z.literal('persistent'),
+]);
+
+export type ConfigCachingType = z.infer<typeof ConfigCachingTypeSchema>;
+
+export const ConfigCachingSchema = z.object({
+  type: ConfigCachingTypeSchema,
+  path: z.string().optional().default('__caching'),
+  ttl: z.number().optional(),
+});
+
+export type ConfigCaching = z.infer<typeof ConfigCachingSchema>;
+
 const ConfigSchema = z.object({
   prefix: z.string().optional().default(''),
-  routePath: z.string().optional().default('app/routes'),
+  routePath: z.string().optional().default('src/app/routes'),
+  caching: ConfigCachingSchema.optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

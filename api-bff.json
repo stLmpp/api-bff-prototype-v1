@@ -1,5 +1,9 @@
 {
   "$schema": "./src/config.schema.json",
   "prefix": "api",
-  "routePath": "app/routes"
+  "routePath": "app/routes",
+  "caching": {
+    "type": "memory",
+    "ttl": 15000
+  }
 }

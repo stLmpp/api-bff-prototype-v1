@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://json-schema.org/draft-06/schema",
   "type": "object",
   "properties": {
     "prefix": {
@@ -7,6 +7,22 @@
     },
     "routePath": {
       "type": "string"
+    },
+    "caching": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["memory", "persistent"]
+        },
+        "path": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "number"
+        }
+      },
+      "required": ["type"]
     }
   }
 }

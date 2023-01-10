@@ -1,7 +1,8 @@
 import { Request } from 'express';
-import { z } from 'zod';
+import { z, ZodObject, ZodType } from 'zod';
 
 import { ConfigCachingSchema } from './config.js';
+import { ErrorResponseStatusCodeSchema } from './error-response.js';
 import { ParamType } from './param-type.js';
 
 const ZRequest: z.ZodType<Request> = z.any();
@@ -46,71 +47,69 @@ export type ApiConfigSchemaMappingBody = z.infer<
   typeof ApiConfigSchemaMappingBody
 >;
 
-const ApiConfigSchemaMappingInOut = z.object({
+const ApiConfigSchemaMappingIn = z.object({
   body: ApiConfigSchemaMappingBody.optional(),
   query: ApiConfigSchemaMappingParam.optional(),
   params: ApiConfigSchemaMappingParam.optional(),
   headers: ApiConfigSchemaMappingParam.optional(),
 });
 
-const ApiConfigSchemaOpenapiSafeParseUnion = z.discriminatedUnion('success', [
-  z.object({
-    success: z.literal(true),
-    data: z.any(),
-  }),
-  z.object({
-    success: z.literal(false),
-    error: z.any(),
-  }),
-]);
-const ApiConfigSchemaOpenapiParams = z.object({
-  safeParse: z
-    .function()
-    .args(z.any(), z.any().optional())
-    .returns(ApiConfigSchemaOpenapiSafeParseUnion),
-  safeParseAsync: z
-    .function()
-    .args(z.any(), z.any().optional())
-    .returns(z.promise(ApiConfigSchemaOpenapiSafeParseUnion)),
+const ApiConfigSchemaMappingOut = z.object({
+  body: ApiConfigSchemaMappingBody.optional(),
+  headers: ApiConfigSchemaMappingParam.optional(),
+});
+
+const ApiConfigSchemaMapping = z.object({
+  in: ApiConfigSchemaMappingIn.optional(),
+  on: ApiConfigSchemaMappingOut.optional(),
+});
+
+const ApiConfigSchemaOpenapiParams: ZodType<ZodObject<any>> = z.any();
+const ApiConfigSchemaOpenapiBody: ZodType<ZodType> = z.any();
+
+const ApiConfigSchemaOpenapiRequest = z.object({
+  body: ApiConfigSchemaOpenapiBody.optional(),
+  query: ApiConfigSchemaOpenapiParams.optional(),
+  params: ApiConfigSchemaOpenapiParams.optional(),
+  headers: ApiConfigSchemaOpenapiParams.optional(),
+});
+
+const ApiConfigSchemaOpenapi = z.object({
+  summary: z.string().optional(),
+  description: z.string().optional(),
+  request: ApiConfigSchemaOpenapiRequest.optional(),
+  response: z
+    .object({
+      ok: ApiConfigSchemaOpenapiParams.optional(),
+      errors: z
+        .array(
+          z.object({
+            statusCode: ErrorResponseStatusCodeSchema,
+            body: ApiConfigSchemaOpenapiParams.optional(),
+          })
+        )
+        .optional(),
+    })
+    .optional(),
 });
 
 export const ApiConfigSchema = z.object({
   host: z.string(),
   path: z.string(),
-  mapping: z
-    .object({
-      in: ApiConfigSchemaMappingInOut.optional(),
-      on: ApiConfigSchemaMappingInOut.optional(),
-    })
-    .optional(),
-  openapi: z
-    .object({
-      summary: z.string().optional(),
-      description: z.string().optional(),
-      request: z
-        .object({
-          body: ApiConfigSchemaOpenapiParams.optional(),
-          query: ApiConfigSchemaOpenapiParams.optional(),
-          params: ApiConfigSchemaOpenapiParams.optional(),
-          headers: ApiConfigSchemaOpenapiParams.optional(),
-        })
-        .optional(),
-      response: z
-        .object({
-          body: ApiConfigSchemaOpenapiParams.optional(),
-          query: ApiConfigSchemaOpenapiParams.optional(),
-          params: ApiConfigSchemaOpenapiParams.optional(),
-          headers: ApiConfigSchemaOpenapiParams.optional(),
-        })
-        .optional(),
-    })
-    .optional(),
+  mapping: ApiConfigSchemaMapping.optional(),
+  openapi: ApiConfigSchemaOpenapi.optional(),
   caching: z
     .union([ConfigCachingSchema.omit({ path: true }), z.literal(false)])
     .optional(),
 });
 
 export type ApiConfig = z.infer<typeof ApiConfigSchema>;
+export type ApiConfigMapping = z.infer<typeof ApiConfigSchemaMapping>;
+export type ApiConfigMappingIn = z.infer<typeof ApiConfigSchemaMappingIn>;
+export type ApiConfigMappingOut = z.infer<typeof ApiConfigSchemaMappingOut>;
+export type ApiConfigOpenapiRequest = z.infer<
+  typeof ApiConfigSchemaOpenapiRequest
+>;
 
 export function env(path: string): () => string | undefined {
   return () => process.env[path];
@@ -140,6 +139,7 @@ function _fromParam(
     typeof param === 'function'
       ? param
       : (params: Record<string, string>) => params[param];
+  // TODO check as any
   return (_, req) => resolver(req[type] as any);
 }
 

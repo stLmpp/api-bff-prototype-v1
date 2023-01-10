@@ -12,8 +12,13 @@ const ErrorResponseErrorObjectSchema = z.object({
 const MIN_STATUS_CODE = StatusCodes.BAD_REQUEST; // 400
 const MAX_STATUS_CODE = 599;
 
+export const ErrorResponseStatusCodeSchema = z
+  .number()
+  .min(MIN_STATUS_CODE)
+  .max(MAX_STATUS_CODE);
+
 export const ErrorResponseSchema = z.object({
-  status: z.number().min(MIN_STATUS_CODE).max(MAX_STATUS_CODE),
+  status: ErrorResponseStatusCodeSchema,
   errors: z.array(ErrorResponseErrorObjectSchema).optional(),
   error: z.string().optional(),
   code: z.string(),

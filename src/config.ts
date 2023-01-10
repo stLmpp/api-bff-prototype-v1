@@ -26,7 +26,10 @@ export const ConfigCachingSchema = z.object({
 export type ConfigCaching = z.infer<typeof ConfigCachingSchema>;
 
 const ConfigSchema = z.object({
-  prefix: z.string().optional().default(''),
+  prefix: z
+    .string()
+    .optional()
+    .transform((prefix) => prefix?.replace(/^(?!\/)/, '/') ?? ''),
   routePath: z.string().optional().default('src/app/routes'),
   caching: ConfigCachingSchema.optional(),
 });

@@ -5,7 +5,7 @@ import express, { Express, json, RequestHandler } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
 import { StatusCodes } from 'http-status-codes';
-import { SafeParseReturnType, ZodSchema } from 'zod';
+import { PathItemObject, PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config.js';
 import { CachingResolver } from './caching/caching-resolver.js';
@@ -13,21 +13,34 @@ import { ConfigCaching, ConfigCachingPathSchema, getConfig } from './config.js';
 import { ErrorCodes } from './error-codes.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
 import { internalConfiguration } from './internal-configuration.js';
-import { lastConfiguration } from './last-configuration.js';
 import { mapParams } from './map-params.js';
+import { MethodSchema } from './method.js';
+import { notFoundMiddleware } from './not-found-middleware.js';
+import { configureOpenapi } from './openapi/configure-openapi.js';
+import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
 
 (globalThis as any).PROD ??= false;
 
 const EXTENSION = PROD ? 'js' : 'ts';
 
+interface InitApiConfigResultMeta {
+  method: string;
+  openapi?: PathItemObject;
+}
+type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
+
 export async function initApiConfig(
   path: string
-): Promise<[string, RequestHandler, { method: string }]> {
-  const [, , ...reqPath] = path
+): Promise<InitApiConfigResult> {
+  const globalConfig = await getConfig();
+  const reqPath = path
+    .replace(globalConfig.routePath, '')
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
-  const method = reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '');
+  const method = MethodSchema.parse(
+    reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '')
+  );
   const file = await import(join('file://', process.cwd(), path));
   const apiConfig = file.default;
   if (!apiConfig) {
@@ -45,36 +58,36 @@ export async function initApiConfig(
     openapi,
     caching,
   } = parsedApiConfig.data;
-  const endPoint = `/${reqPath.join('/')}`;
+  const endPoint = `${reqPath.join('/')}`;
+  const operation = getOperation(parsedApiConfig.data);
   return [
     endPoint,
     async (req, res, next) => {
-      const reqMethod = req.method.toLowerCase();
-      if (reqMethod !== method.toLowerCase()) {
+      if (req.method.toLowerCase() !== method.toLowerCase()) {
         next();
         return;
       }
       const [params, headers, body, query] = await Promise.all([
         mapParams('params', mapping?.in?.params, req),
         mapParams('headers', mapping?.in?.headers, req),
-        reqMethod === 'get'
+        method === 'GET'
           ? Promise.resolve(undefined)
           : mapParams('body', mapping?.in?.body, req),
         mapParams('query', mapping?.in?.query, req),
       ]);
       let newPathName = pathname;
       const badRequestErrors: ErrorResponseErrorObject[] = [];
-      const headerSchema = openapi?.request?.headers as ZodSchema | undefined;
+      const headerSchema = openapi?.request?.headers;
       if (headerSchema) {
         const errors = await validateParams(headerSchema, headers, 'headers');
         badRequestErrors.push(...errors);
       }
-      const querySchema = openapi?.request?.query as ZodSchema | undefined;
+      const querySchema = openapi?.request?.query;
       if (querySchema) {
         const errors = await validateParams(querySchema, query, 'query');
         badRequestErrors.push(...errors);
       }
-      const paramsSchema = openapi?.request?.params as ZodSchema | undefined;
+      const paramsSchema = openapi?.request?.params;
       if (paramsSchema) {
         const errors = await validateParams(paramsSchema, params, 'params');
         badRequestErrors.push(...errors);
@@ -100,10 +113,7 @@ export async function initApiConfig(
       };
       const bodyZodSchema = openapi?.request?.body;
       if (bodyZodSchema) {
-        const parsedBody = (await bodyZodSchema.safeParseAsync(
-          body,
-          undefined
-        )) as SafeParseReturnType<any, any>;
+        const parsedBody = await bodyZodSchema.safeParseAsync(body);
         if (!parsedBody.success) {
           const messages = parsedBody.error.errors.map((error) => ({
             path: error.path.join('.'),
@@ -137,7 +147,6 @@ export async function initApiConfig(
         query,
         params,
       });
-      const globalConfig = await getConfig();
       const hasCachingConfig =
         caching !== false && (!!globalConfig.caching || !!caching);
       const shouldCache = method.toLowerCase() === 'get' && hasCachingConfig;
@@ -190,7 +199,7 @@ export async function initApiConfig(
       }
       res.status(StatusCodes.OK).send(data);
     },
-    { method },
+    { method, openapi: { [method.toLowerCase()]: operation } },
   ];
 }
 
@@ -207,12 +216,16 @@ export async function initApp(): Promise<Express> {
   const middlewaresSorted = [...middlewares].sort(
     ([endPointA], [endPointB]) => endPointB.length - endPointA.length
   );
+  const openapiPaths: PathsObject = {};
   for (const [endPoint, handler, meta] of middlewaresSorted) {
+    const finalEndPoint = `${config.prefix}${endPoint}`;
     console.log(
-      `Registering end-point: [${meta.method.toUpperCase()}] ${endPoint}`
+      `Registering end-point: [${meta.method.toUpperCase()}] ${finalEndPoint}`
     );
-    server.use(endPoint, handler);
+    server.use(`${finalEndPoint}`, handler);
+    openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
   }
+  configureOpenapi(server, openapiPaths);
   await internalConfiguration(server);
-  return lastConfiguration(server);
+  return server.use(notFoundMiddleware());
 }

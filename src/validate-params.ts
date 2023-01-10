@@ -1,4 +1,4 @@
-import { SafeParseReturnType, ZodSchema } from 'zod';
+import { ZodSchema } from 'zod';
 
 import { ErrorResponseErrorObject } from './error-response.js';
 import { ParamType } from './param-type.js';
@@ -8,10 +8,7 @@ export async function validateParams(
   params: Record<string, string>,
   type: ParamType
 ): Promise<ErrorResponseErrorObject[]> {
-  const parsedParams = (await headerZodSchema.safeParseAsync(
-    params,
-    undefined
-  )) as SafeParseReturnType<any, any>;
+  const parsedParams = await headerZodSchema.safeParseAsync(params, undefined);
   if (!parsedParams.success) {
     return parsedParams.error.errors.map((error) => ({
       path: error.path.join('.'),

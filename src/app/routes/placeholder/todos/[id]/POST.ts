@@ -1,3 +1,5 @@
+import { extendApi } from '@anatine/zod-openapi';
+import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { ApiConfig, forward } from '../../../../../api-config.js';
@@ -36,11 +38,26 @@ export default {
         id: z.string(),
       }),
       query: z.object({
-        test: z.string(),
+        test: extendApi(z.string(), { description: 'Test query' }),
       }),
       headers: z.object({
-        authorization: z.string(),
+        authorization: z.string().optional(),
       }),
+    },
+    response: {
+      ok: z.object({
+        id: z.string(),
+      }),
+      errors: [
+        {
+          statusCode: StatusCodes.BAD_REQUEST,
+          body: z.object({}),
+        },
+        {
+          statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+          body: z.object({}),
+        },
+      ],
     },
   },
 } satisfies ApiConfig;

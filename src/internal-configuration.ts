@@ -11,8 +11,9 @@ export async function internalConfiguration(app: Express): Promise<Express> {
   }
   const caching = config.caching;
   const cachingStrategies = CachingResolver.getAllCachingStrategies();
-  console.log('Registering end-point: [POST] /__internal/invalidade-all-cache');
-  return app.post('/__internal/invalidade-all-cache', async (req, res) => {
+  const endPoint = '/__bff-internal/invalidade-all-cache';
+  console.log(`Registering end-point: [POST] ${endPoint}`);
+  return app.post(endPoint, async (req, res) => {
     await Promise.all(
       cachingStrategies.map((cachingStrategy) =>
         cachingStrategy.invalidateAll({

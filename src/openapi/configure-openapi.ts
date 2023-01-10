@@ -1,13 +1,26 @@
-import { Express } from 'express';
+import { Router } from 'express';
 import { OpenAPIObject, PathsObject } from 'openapi3-ts';
 import { serve, setup } from 'swagger-ui-express';
 
-export function configureOpenapi(app: Express, paths: PathsObject): Express {
+import { getConfig } from '../config.js';
+
+export async function configureOpenapi(
+  router: Router,
+  paths: PathsObject
+): Promise<void> {
   // TODO add title, etc from configuration
+  const config = await getConfig();
   const openapiObject: OpenAPIObject = {
     openapi: '3.0.2',
     paths,
     info: { title: 'Api BFF', version: '1' },
+    servers: [{ url: config.prefix ?? '/' }],
   };
-  return app.use('/api/help', serve, setup(openapiObject));
+  router.use(
+    '/help',
+    serve,
+    setup(openapiObject, {
+      swaggerOptions: {},
+    })
+  );
 }

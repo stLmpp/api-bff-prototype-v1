@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 
 import compression from 'compression';
-import express, { Express, json, RequestHandler } from 'express';
+import express, { Express, json, RequestHandler, Router } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
 import { StatusCodes } from 'http-status-codes';
@@ -217,15 +217,17 @@ export async function initApp(): Promise<Express> {
     ([endPointA], [endPointB]) => endPointB.length - endPointA.length
   );
   const openapiPaths: PathsObject = {};
+  const router = Router();
   for (const [endPoint, handler, meta] of middlewaresSorted) {
     const finalEndPoint = `${config.prefix}${endPoint}`;
     console.log(
       `Registering end-point: [${meta.method.toUpperCase()}] ${finalEndPoint}`
     );
-    server.use(`${finalEndPoint}`, handler);
+    router.use(endPoint, handler);
     openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
   }
-  configureOpenapi(server, openapiPaths);
+  await configureOpenapi(router, openapiPaths);
+  server.use(`${config.prefix ?? '/'}`, router);
   await internalConfiguration(server);
   return server.use(notFoundMiddleware());
 }

@@ -3,7 +3,6 @@ import { z, ZodType } from 'zod';
 
 import { RequestSchema } from './request-schema.js';
 
-// TODO better support to ParsedQs
 const ParsedQsSchema: ZodType<ParsedQs> = z.lazy(() =>
   z.record(z.string(), ParsedQsTypesSchema)
 );

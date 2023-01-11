@@ -65,7 +65,6 @@ module.exports = {
     '@typescript-eslint/unified-signatures': 'off',
     '@typescript-eslint/no-useless-constructor': ['off'],
     '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/no-explicit-any': ['off'],
     '@typescript-eslint/prefer-optional-chain': ['warn'],
     '@typescript-eslint/explicit-module-boundary-types': ['off'],
     '@typescript-eslint/no-shadow': ['error'],
@@ -170,7 +169,8 @@ module.exports = {
       },
     ],
     'import/newline-after-import': ['error'],
-    '@typescript-eslint/no-magic-numbers': ['error']
+    '@typescript-eslint/no-magic-numbers': ['error'],
+    '@typescript-eslint/no-explicit-any': ['error']
   },
   settings: {
     'import/resolver': {

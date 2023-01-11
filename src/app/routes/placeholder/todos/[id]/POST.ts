@@ -2,7 +2,8 @@ import { extendApi } from '@anatine/zod-openapi';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
-import { ApiConfig, forward } from '../../../../../api-config.js';
+import { ApiConfig } from '../../../../../api-config/api-config.js';
+import { forward } from '../../../../../api-config/forward.js';
 
 const MIN_ARRAY = 1;
 

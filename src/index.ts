@@ -7,20 +7,23 @@ import helmet from 'helmet';
 import { StatusCodes } from 'http-status-codes';
 import { PathItemObject, PathsObject } from 'openapi3-ts';
 
-import { ApiConfigSchema } from './api-config.js';
+import { ApiConfigSchema } from './api-config/api-config.js';
 import { CachingResolver } from './caching/caching-resolver.js';
 import { ConfigCaching, ConfigCachingPathSchema, getConfig } from './config.js';
 import { ErrorCodes } from './error-codes.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
 import { internalConfiguration } from './internal-configuration.js';
+import { mapBody } from './map-body.js';
+import { mapHeaders } from './map-headers.js';
 import { mapParams } from './map-params.js';
+import { mapQuery } from './map-query.js';
 import { MethodSchema } from './method.js';
 import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
 import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
 
-(globalThis as any).PROD ??= false;
+(globalThis as unknown as { PROD: boolean }).PROD ??= false;
 
 const EXTENSION = PROD ? 'js' : 'ts';
 
@@ -68,12 +71,12 @@ export async function initApiConfig(
         return;
       }
       const [params, headers, body, query] = await Promise.all([
-        mapParams('params', mapping?.in?.params, req),
-        mapParams('headers', mapping?.in?.headers, req),
+        mapParams(mapping?.in?.params, req),
+        mapHeaders(mapping?.in?.headers, req),
         method === 'GET'
           ? Promise.resolve(undefined)
-          : mapParams('body', mapping?.in?.body, req),
-        mapParams('query', mapping?.in?.query, req),
+          : mapBody(mapping?.in?.body, req),
+        mapQuery(mapping?.in?.query, req),
       ]);
       let newPathName = pathname;
       const badRequestErrors: ErrorResponseErrorObject[] = [];

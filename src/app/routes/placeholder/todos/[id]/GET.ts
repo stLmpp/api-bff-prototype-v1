@@ -1,10 +1,8 @@
-import {
-  ApiConfig,
-  fixed,
-  forward,
-  fromHeader,
-  fromQuery,
-} from '../../../../../api-config.js';
+import { ApiConfig } from '../../../../../api-config/api-config.js';
+import { fixed } from '../../../../../api-config/fixed.js';
+import { forward } from '../../../../../api-config/forward.js';
+import { fromHeader } from '../../../../../api-config/from-header.js';
+import { fromQuery } from '../../../../../api-config/from-query.js';
 
 export default {
   host: 'jsonplaceholder.typicode.com',

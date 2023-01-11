@@ -1,57 +1,29 @@
 import { Request } from 'express';
 
-import {
-  ApiConfigSchemaMappingBody,
-  ApiConfigSchemaMappingParam,
-} from './api-config.js';
-
-type MapParamsType = 'params' | 'query' | 'headers' | 'body';
+import { ApiConfigMappingParam } from './api-config/api-config-param.js';
+import { mapGeneric } from './map-generic.js';
 
 export async function mapParams(
-  type: 'params' | 'query' | 'headers',
-  mapping: ApiConfigSchemaMappingParam | undefined,
+  mapping: ApiConfigMappingParam | undefined,
   req: Request
-): Promise<Record<string, string>>;
-export async function mapParams<T>(
-  type: 'body',
-  mapping: ApiConfigSchemaMappingBody | undefined,
-  req: Request
-): Promise<T | undefined>;
-export async function mapParams(
-  type: MapParamsType,
-  mapping: ApiConfigSchemaMappingParam | ApiConfigSchemaMappingBody | undefined,
-  req: Request
-): Promise<Record<string, string> | any> {
-  const isParamType = type !== 'body';
+): Promise<Record<string, string>> {
   if (!mapping) {
-    return isParamType ? {} : undefined;
+    return {};
   }
-  const reqData = req[type] ?? {};
+  const { params } = req;
   if (typeof mapping === 'function') {
-    return mapping(reqData, req);
+    return _formatParams(await mapping(params, req));
   }
-  const resolveValueFinal = !isParamType
-    ? (value: any) => value
-    : (value: any) => String(value);
-  const entries = Object.entries(mapping);
-  const finalResult: Record<string, unknown> = {};
-  const promises: Promise<any>[] = [];
-  for (const [key, value] of entries) {
-    if (typeof value === 'function') {
-      promises.push(
-        Promise.resolve(value(reqData[key], req)).then((resolvedValue) => {
-          if (resolvedValue != null) {
-            finalResult[key] = resolveValueFinal(resolvedValue);
-          }
-        })
-      );
-    } else {
-      const reqValue = reqData[value];
-      if (typeof reqValue != null) {
-        finalResult[key] = resolveValueFinal(reqValue);
-      }
-    }
-  }
-  await Promise.all(promises);
-  return finalResult;
+  const object = await mapGeneric(mapping, params, req);
+  return _formatParams(object ?? {});
+}
+
+function _formatParams(
+  params: Record<string, unknown>
+): Record<string, string> {
+  return Object.entries(params).reduce(
+    (acc, [key, value]) =>
+      typeof value === 'undefined' ? acc : { ...acc, [key]: value },
+    {}
+  );
 }

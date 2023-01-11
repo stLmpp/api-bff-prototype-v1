@@ -6,7 +6,7 @@ import {
   ApiConfig,
   ApiConfigMappingIn,
   ApiConfigOpenapiRequest,
-} from '../api-config.js';
+} from '../api-config/api-config.js';
 import { Entries } from '../entries.js';
 import { ParamType } from '../param-type.js';
 

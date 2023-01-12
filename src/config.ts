@@ -32,6 +32,7 @@ const ConfigSchema = z.object({
     .transform((prefix) => prefix?.replace(/^(?!\/)/, '/') ?? ''),
   routePath: z.string().optional().default('src/app/routes'),
   caching: ConfigCachingSchema.optional(),
+  openapi: z.boolean().optional().default(true),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

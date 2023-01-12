@@ -29,13 +29,11 @@ const EXTENSION = PROD ? 'js' : 'ts';
 
 interface InitApiConfigResultMeta {
   method: string;
-  openapi?: PathItemObject;
+  openapi?: PathItemObject | null;
 }
 type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
 
-export async function initApiConfig(
-  path: string
-): Promise<InitApiConfigResult> {
+async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const globalConfig = await getConfig();
   const reqPath = path
     .replace(globalConfig.routePath, '')
@@ -62,7 +60,9 @@ export async function initApiConfig(
     caching,
   } = parsedApiConfig.data;
   const endPoint = `${reqPath.join('/')}`;
-  const operation = getOperation(parsedApiConfig.data);
+  const operation = globalConfig.openapi
+    ? getOperation(parsedApiConfig.data)
+    : null;
   return [
     endPoint,
     async (req, res, next) => {
@@ -206,7 +206,7 @@ export async function initApiConfig(
   ];
 }
 
-export async function initApp(): Promise<Express> {
+export async function createApplication(): Promise<Express> {
   const server = express().use(helmet()).use(compression()).use(json());
   const config = await getConfig();
   const beginning = PROD ? 'dist/' : '';
@@ -227,9 +227,13 @@ export async function initApp(): Promise<Express> {
       `Registering end-point: [${meta.method.toUpperCase()}] ${finalEndPoint}`
     );
     router.use(endPoint, handler);
-    openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
+    if (meta.openapi) {
+      openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
+    }
   }
-  await configureOpenapi(router, openapiPaths);
+  if (config.openapi) {
+    await configureOpenapi(router, openapiPaths);
+  }
   server.use(`${config.prefix ?? '/'}`, router);
   await internalConfiguration(server);
   return server.use(notFoundMiddleware());

@@ -23,6 +23,9 @@
         }
       },
       "required": ["type"]
+    },
+    "openapi": {
+      "type": "boolean"
     }
   }
 }

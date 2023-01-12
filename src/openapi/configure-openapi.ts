@@ -16,6 +16,7 @@ export async function configureOpenapi(
     info: { title: 'Api BFF', version: '1' },
     servers: [{ url: config.prefix ?? '/' }],
   };
+  console.log(`Registering end-point: [GET] ${config.prefix ?? ''}/help`);
   router.use(
     '/help',
     serve,

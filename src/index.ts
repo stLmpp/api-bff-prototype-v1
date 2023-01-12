@@ -210,6 +210,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
 export async function createApplication(): Promise<Express> {
   const server = express().use(helmet()).use(compression()).use(json());
   const config = await getConfig();
+  console.log('config', config);
   const beginning = PROD ? 'dist/' : '';
   const middleGlob = '/**/{GET,POST,PUT,PATCH,DELETE}';
   const globPath = `${beginning}${config.routePath}${middleGlob}.${EXTENSION}`;
@@ -235,7 +236,7 @@ export async function createApplication(): Promise<Express> {
   if (config.openapi) {
     await configureOpenapi(router, openapiPaths);
   }
-  server.use(`${config.prefix ?? '/'}`, router);
+  server.use(config.prefix ?? '/', router);
   await internalConfiguration(server);
   return server.use(notFoundMiddleware());
 }

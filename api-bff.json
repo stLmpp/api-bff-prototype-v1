@@ -4,5 +4,6 @@
   "caching": {
     "type": "persistent",
     "ttl": 15000
-  }
+  },
+  "openapi": "ENV.OPENAPI"
 }

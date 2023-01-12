@@ -3,7 +3,7 @@ import { extname } from 'node:path';
 
 import fastGlob from 'fast-glob';
 import { parse } from 'yaml';
-import { z } from 'zod';
+import { z, ZodType } from 'zod';
 
 const ConfigCachingTypeSchema = z.union([
   z.literal('memory'),
@@ -25,14 +25,36 @@ export const ConfigCachingSchema = z.object({
 
 export type ConfigCaching = z.infer<typeof ConfigCachingSchema>;
 
+const START_STRING = 'ENV.';
+const EnvStringSchema = z
+  .string()
+  .startsWith(START_STRING)
+  .transform((env) => _getEnv(env));
+
+// TODO add mapping to convert boolean and numeric values
+
+const mapper = {
+  number: (item: string | undefined) => item && Number(item),
+} as const;
+
+function _zPossibleEnv<T extends ZodType>(
+  schema: T,
+  type: 'number' | 'boolean' | 'string' = 'string'
+) {
+  return z.union([schema, EnvStringSchema]);
+}
+
+function _getEnv(env: string) {
+  return process.env[env.replace(new RegExp(`^${START_STRING}`), '')];
+}
+
 const ConfigSchema = z.object({
-  prefix: z
-    .string()
+  prefix: _zPossibleEnv(z.string())
     .optional()
     .transform((prefix) => prefix?.replace(/^(?!\/)/, '/') ?? ''),
-  routePath: z.string().optional().default('src/app/routes'),
+  routePath: _zPossibleEnv(z.string()).optional().default('src/app/routes'),
   caching: ConfigCachingSchema.optional(),
-  openapi: z.boolean().optional().default(true),
+  openapi: _zPossibleEnv(z.boolean()).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

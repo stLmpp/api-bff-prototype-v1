@@ -25,7 +25,15 @@
       "required": ["type"]
     },
     "openapi": {
-      "type": "boolean"
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "pattern": "^ENV\\..+"
+        }
+      ]
     }
   }
 }

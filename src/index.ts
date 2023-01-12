@@ -163,6 +163,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           : { type: 'memory', path: '' }
       ) satisfies ConfigCaching;
       let cacheUsed = false;
+      // TODO define what will compose the cache key
       const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
         authorization: headers.authorization,
       })}`;

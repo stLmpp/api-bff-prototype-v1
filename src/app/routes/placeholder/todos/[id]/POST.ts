@@ -1,9 +1,9 @@
-import { extendApi } from '@anatine/zod-openapi';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { ApiConfig } from '../../../../../api-config/api-config.js';
 import { forward } from '../../../../../api-config/forward.js';
+import { schema } from '../../../../../openapi/schema.js';
 
 const MIN_ARRAY = 1;
 
@@ -19,27 +19,32 @@ export default {
     },
   },
   openapi: {
+    description: 'POST TODOS',
+    summary: 'POST TODOS SUMMARY',
     request: {
-      body: z.object({
-        id: z.string(),
-        auth: z.string(),
-        other: z.number(),
-        object: z.object({
+      body: schema(
+        z.object({
           id: z.string(),
+          auth: z.string(),
+          other: z.number(),
+          object: z.object({
+            id: z.string(),
+          }),
+          array: z
+            .array(
+              z.object({
+                id: z.string(),
+              })
+            )
+            .min(MIN_ARRAY),
         }),
-        array: z
-          .array(
-            z.object({
-              id: z.string(),
-            })
-          )
-          .min(MIN_ARRAY),
-      }),
+        { description: 'Body' }
+      ),
       params: z.object({
         id: z.string(),
       }),
       query: z.object({
-        test: extendApi(z.string(), { description: 'Test query' }),
+        test: schema(z.string(), { description: 'Test query' }),
       }),
       headers: z.object({
         authorization: z.string().optional(),

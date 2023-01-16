@@ -5,6 +5,8 @@ import fastGlob from 'fast-glob';
 import { parse } from 'yaml';
 import { z } from 'zod';
 
+import { fromZodIssuePathToString } from '../zod-error-formatter.js';
+
 import { ConfigCachingSchema } from './config-caching.js';
 import { ConfigOpenapiSchema } from './config-openapi.js';
 import { zPossibleEnv } from './env.js';
@@ -50,7 +52,8 @@ async function parseAndAssertConfig(
       `API BFF Config not valid.\n` +
         `Errors:\n` +
         ` - ${zodParsed.error.errors.map(
-          (error) => `${error.path.join('.')} ${error.message}\n`
+          (issue) =>
+            `${fromZodIssuePathToString(issue.path)} ${issue.message}\n`
         )}`
     );
   }

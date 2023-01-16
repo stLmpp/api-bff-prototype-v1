@@ -4,7 +4,7 @@ import compression from 'compression';
 import express, { Express, json, RequestHandler, Router } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
-import { StatusCodes } from 'http-status-codes';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 import { PathItemObject, PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
@@ -26,8 +26,9 @@ import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
 import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
+import { fromZodErrorToErroResponseObjects } from './zod-error-formatter.js';
 
-typeof PROD === 'undefined' && (PROD = false);
+globalThis.PROD ??= false;
 
 const EXTENSION = PROD ? 'js' : 'ts';
 
@@ -120,15 +121,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       };
       const bodyZodSchema = openapi?.request?.body;
       if (bodyZodSchema) {
-        const parsedBody = await bodyZodSchema.safeParseAsync(body);
-        if (!parsedBody.success) {
-          const messages = parsedBody.error.errors.map((error) => ({
-            path: error.path.join('.'),
-            message: error.message,
-            type: 'body',
-          })) satisfies ErrorResponseErrorObject[];
-          badRequestErrors.push(...messages);
-        }
+        const errors = await validateParams(bodyZodSchema, body, 'body');
+        badRequestErrors.push(...errors);
       }
       if (body) {
         requestOptions.body = JSON.stringify(body);
@@ -137,7 +131,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         const errorResponse = {
           status: StatusCodes.BAD_REQUEST,
           errors: badRequestErrors,
-          message: 'Bad request',
+          error: getReasonPhrase(StatusCodes.BAD_REQUEST),
+          message: 'Invalid parameters', // TODO better error message
           code: ErrorCodes.BadRequest,
         } satisfies ErrorResponse;
         res.status(StatusCodes.BAD_REQUEST).send(errorResponse);
@@ -197,7 +192,25 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           );
         return;
       }
-      const data = await response.json();
+      let data = await response.json();
+      if (openapi?.response?.ok) {
+        const parsedResponse = await openapi.response.ok.safeParseAsync(data);
+        if (!parsedResponse.success) {
+          const error: ErrorResponse = {
+            error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
+            status: StatusCodes.MISDIRECTED_REQUEST,
+            message: 'The response from the server has data validation errors',
+            errors: fromZodErrorToErroResponseObjects(
+              parsedResponse.error,
+              'body'
+            ),
+            code: ErrorCodes.ResponseValidationError,
+          };
+          res.status(StatusCodes.MISDIRECTED_REQUEST).send(error);
+          return;
+        }
+        data = parsedResponse.data;
+      }
       if (shouldCache) {
         cachingStrategy.set(cacheKey, data, newCaching).catch(() => null);
         console.log('New value cached');

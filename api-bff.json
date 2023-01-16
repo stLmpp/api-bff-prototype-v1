@@ -5,5 +5,5 @@
     "type": "persistent",
     "ttl": 15000
   },
-  "openapi": "ENV.OPENAPI"
+  "openapi": true
 }

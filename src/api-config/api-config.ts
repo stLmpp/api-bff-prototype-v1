@@ -22,7 +22,7 @@ const ApiConfigMappingOutSchema = z.object({
 
 const ApiConfigMappingSchema = z.object({
   in: ApiConfigMappingInSchema.optional(),
-  on: ApiConfigMappingOutSchema.optional(),
+  out: ApiConfigMappingOutSchema.optional(),
 });
 
 const ApiConfigOpenapiParamsSchema: ZodType<
@@ -43,12 +43,12 @@ const ApiConfigOpenapiSchema = z.object({
   request: ApiConfigOpenapiRequestSchema.optional(),
   response: z
     .object({
-      ok: ApiConfigOpenapiParamsSchema.optional(),
+      ok: ApiConfigOpenapiBodySchema.optional(),
       errors: z
         .array(
           z.object({
             statusCode: ErrorResponseStatusCodeSchema,
-            body: ApiConfigOpenapiParamsSchema.optional(),
+            body: ApiConfigOpenapiBodySchema.optional(),
           })
         )
         .optional(),

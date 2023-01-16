@@ -1,20 +1,17 @@
-import { ZodSchema } from 'zod';
+import { ZodType } from 'zod';
 
 import { ErrorResponseErrorObject } from './error-response.js';
 import { ParamType } from './param-type.js';
+import { fromZodErrorToErroResponseObjects } from './zod-error-formatter.js';
 
 export async function validateParams(
-  headerZodSchema: ZodSchema,
-  params: Record<string, string>,
+  schema: ZodType,
+  data: unknown,
   type: ParamType
 ): Promise<ErrorResponseErrorObject[]> {
-  const parsedParams = await headerZodSchema.safeParseAsync(params, undefined);
+  const parsedParams = await schema.safeParseAsync(data);
   if (!parsedParams.success) {
-    return parsedParams.error.errors.map((error) => ({
-      path: error.path.join('.'),
-      message: error.message,
-      type,
-    })) satisfies ErrorResponseErrorObject[];
+    return fromZodErrorToErroResponseObjects(parsedParams.error, type);
   }
   return [];
 }

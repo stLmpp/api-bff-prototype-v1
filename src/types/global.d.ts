@@ -1,5 +1,6 @@
 declare global {
-  let PROD: boolean;
+  // eslint-disable-next-line no-var
+  var PROD: boolean;
 }
 
 export {};

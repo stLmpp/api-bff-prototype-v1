@@ -1,6 +1,6 @@
 import { z, ZodObject, ZodType } from 'zod';
 
-import { ConfigCachingSchema } from '../config.js';
+import { ConfigCachingSchema } from '../config/config-caching.js';
 import { ErrorResponseStatusCodeSchema } from '../error-response.js';
 
 import { ApiConfigMappingBodySchema } from './api-config-body.js';

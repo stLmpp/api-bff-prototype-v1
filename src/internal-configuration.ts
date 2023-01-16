@@ -2,7 +2,7 @@ import { Express } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import { CachingResolver } from './caching/caching-resolver.js';
-import { getConfig } from './config.js';
+import { getConfig } from './config/config.js';
 
 export async function internalConfiguration(app: Express): Promise<Express> {
   const config = await getConfig();

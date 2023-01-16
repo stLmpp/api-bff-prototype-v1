@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft-06/schema",
+  "type": "object",
+  "properties": {
+    "prefix": {
+      "$ref": "#/$defs/EnvString"
+    },
+    "routePath": {
+      "$ref": "#/$defs/EnvString"
+    },
+    "caching": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": ["memory", "persistent"]
+            },
+            {
+              "$ref": "#/$defs/Env"
+            }
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/EnvString"
+        },
+        "ttl": {
+          "$ref": "#/$defs/EnvNumber"
+        }
+      },
+      "required": ["type"]
+    },
+    "openapi": {
+      "oneOf": [
+        { "$ref": "#/$defs/EnvBoolean" },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/EnvString"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "Env": {
+      "type": "string",
+      "pattern": "^ENV\\..+"
+    },
+    "EnvString": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Env"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "EnvNumber": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Env"
+        },
+        {
+          "type": "number"
+        }
+      ]
+    },
+    "EnvBoolean": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Env"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    }
+  }
+}

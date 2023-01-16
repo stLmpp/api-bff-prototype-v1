@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { ConfigCaching, ConfigCachingType } from '../config.js';
+import { ConfigCaching, ConfigCachingType } from '../config/config-caching.js';
 import { pathExists } from '../path-exists.js';
 
 import { CachingData, CachingDataSchema } from './caching-data.js';

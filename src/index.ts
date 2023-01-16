@@ -9,7 +9,11 @@ import { PathItemObject, PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
 import { CachingResolver } from './caching/caching-resolver.js';
-import { ConfigCaching, ConfigCachingPathSchema, getConfig } from './config.js';
+import {
+  ConfigCaching,
+  ConfigCachingPathSchema,
+} from './config/config-caching.js';
+import { getConfig } from './config/config.js';
 import { ErrorCodes } from './error-codes.js';
 import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
 import { internalConfiguration } from './internal-configuration.js';
@@ -23,7 +27,7 @@ import { configureOpenapi } from './openapi/configure-openapi.js';
 import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
 
-(globalThis as unknown as { PROD: boolean }).PROD ??= false;
+typeof PROD === 'undefined' && (PROD = false);
 
 const EXTENSION = PROD ? 'js' : 'ts';
 
@@ -152,7 +156,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       });
       const hasCachingConfig =
         caching !== false && (!!globalConfig.caching || !!caching);
-      const shouldCache = method.toLowerCase() === 'get' && hasCachingConfig;
+      const shouldCache = method === 'GET' && hasCachingConfig;
       const newCaching = (
         hasCachingConfig
           ? {
@@ -233,9 +237,7 @@ export async function createApplication(): Promise<Express> {
       openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
     }
   }
-  if (config.openapi) {
-    await configureOpenapi(router, openapiPaths);
-  }
+  await configureOpenapi(router, openapiPaths);
   server.use(config.prefix ?? '/', router);
   await internalConfiguration(server);
   return server.use(notFoundMiddleware());

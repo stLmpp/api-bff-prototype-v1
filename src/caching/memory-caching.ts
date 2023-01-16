@@ -1,4 +1,4 @@
-import { ConfigCaching, ConfigCachingType } from '../config.js';
+import { ConfigCaching, ConfigCachingType } from '../config/config-caching.js';
 
 import { CachingData } from './caching-data.js';
 import { CachingStrategy } from './caching-strategy.js';

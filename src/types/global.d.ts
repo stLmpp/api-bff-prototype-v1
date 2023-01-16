@@ -1,5 +1,5 @@
 declare global {
-  const PROD: boolean;
+  let PROD: boolean;
 }
 
 export {};

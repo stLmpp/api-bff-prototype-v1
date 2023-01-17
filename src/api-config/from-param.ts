@@ -1,6 +1,6 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingParamSpecificReturn } from './api-config-param.js';
+import { type ApiConfigMappingParamSpecificReturn } from './api-config-param.js';
 
 type FromParamFunction = (
   params: Record<string, string>

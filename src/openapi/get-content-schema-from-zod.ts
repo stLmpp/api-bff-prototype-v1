@@ -1,5 +1,5 @@
-import { SchemaObject } from 'openapi3-ts';
-import { ZodType } from 'zod';
+import { type SchemaObject } from 'openapi3-ts';
+import { type ZodType } from 'zod';
 
 import { getSchemaFromZod } from './get-schema-from-zod.js';
 

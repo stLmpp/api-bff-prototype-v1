@@ -1,9 +1,9 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingBodyObject } from './api-config/api-config-body.js';
-import { ApiConfigMappingHeadersObject } from './api-config/api-config-header.js';
-import { ApiConfigMappingParamObject } from './api-config/api-config-param.js';
-import { ApiConfigMappingQueryObject } from './api-config/api-config-query.js';
+import { type ApiConfigMappingBodyObject } from './api-config/api-config-body.js';
+import { type ApiConfigMappingHeadersObject } from './api-config/api-config-header.js';
+import { type ApiConfigMappingParamObject } from './api-config/api-config-param.js';
+import { type ApiConfigMappingQueryObject } from './api-config/api-config-query.js';
 
 function _isRecord(object: unknown): object is Record<string, unknown> {
   return !!object && typeof object === 'object';

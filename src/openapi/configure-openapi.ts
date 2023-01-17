@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { OpenAPIObject, PathsObject } from 'openapi3-ts';
+import { type Router } from 'express';
+import { type OpenAPIObject, type PathsObject } from 'openapi3-ts';
 import { serve, setup } from 'swagger-ui-express';
 
 import { getConfig } from '../config/config.js';

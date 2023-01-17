@@ -1,11 +1,14 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { ConfigCaching, ConfigCachingType } from '../config/config-caching.js';
+import {
+  type ConfigCaching,
+  type ConfigCachingType,
+} from '../config/config-caching.js';
 import { pathExists } from '../path-exists.js';
 
-import { CachingData, CachingDataSchema } from './caching-data.js';
-import { CachingStrategy } from './caching-strategy.js';
+import { type CachingData, CachingDataSchema } from './caching-data.js';
+import { type CachingStrategy } from './caching-strategy.js';
 
 export class PersistentCaching implements CachingStrategy {
   private async _createFolder(path: string): Promise<void> {

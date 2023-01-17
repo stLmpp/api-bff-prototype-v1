@@ -1,4 +1,4 @@
-import { Request } from 'express';
-import { z, ZodType } from 'zod';
+import { type Request } from 'express';
+import { z, type ZodType } from 'zod';
 
 export const RequestSchema: ZodType<Request> = z.any();

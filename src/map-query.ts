@@ -1,6 +1,6 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingQuery } from './api-config/api-config-query.js';
+import { type ApiConfigMappingQuery } from './api-config/api-config-query.js';
 import { mapGeneric } from './map-generic.js';
 
 export async function mapQuery(

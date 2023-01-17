@@ -1,4 +1,4 @@
-import { z, ZodObject, ZodType } from 'zod';
+import { z, type ZodObject, type ZodType } from 'zod';
 
 import { ConfigCachingSchema } from '../config/config-caching.js';
 import { ErrorResponseStatusCodeSchema } from '../error-response.js';

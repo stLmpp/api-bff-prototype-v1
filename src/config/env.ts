@@ -1,4 +1,4 @@
-import { z, ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 const START_STRING = 'ENV.' as const;
 const START_STRING_REGEX = new RegExp(`^${START_STRING.replace('.', '\\.')}`);

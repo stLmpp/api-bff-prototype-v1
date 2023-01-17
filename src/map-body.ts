@@ -1,6 +1,6 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingBody } from './api-config/api-config-body.js';
+import { type ApiConfigMappingBody } from './api-config/api-config-body.js';
 import { mapGeneric } from './map-generic.js';
 
 export async function mapBody(

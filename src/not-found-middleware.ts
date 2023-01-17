@@ -1,8 +1,8 @@
-import { RequestHandler } from 'express';
+import { type RequestHandler } from 'express';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
 import { ErrorCodes } from './error-codes.js';
-import { ErrorResponse } from './error-response.js';
+import { type ErrorResponse } from './error-response.js';
 
 export function notFoundMiddleware(): RequestHandler {
   return (req, res) => {

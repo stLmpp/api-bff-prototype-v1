@@ -1,4 +1,4 @@
-import { ApiConfig } from '../../../../../api-config/api-config.js';
+import { type ApiConfig } from '../../../../../api-config/api-config.js';
 import { fixed } from '../../../../../api-config/fixed.js';
 import { forward } from '../../../../../api-config/forward.js';
 import { fromHeader } from '../../../../../api-config/from-header.js';

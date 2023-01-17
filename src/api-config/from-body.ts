@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
 function _inObject<K extends string | number>(
   object: object,

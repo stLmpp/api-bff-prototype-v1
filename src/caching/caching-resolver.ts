@@ -1,6 +1,6 @@
-import { ConfigCachingType } from '../config/config-caching.js';
+import { type ConfigCachingType } from '../config/config-caching.js';
 
-import { CachingStrategy } from './caching-strategy.js';
+import { type CachingStrategy } from './caching-strategy.js';
 import { MemoryCaching } from './memory-caching.js';
 import { PersistentCaching } from './persistent-caching.js';
 

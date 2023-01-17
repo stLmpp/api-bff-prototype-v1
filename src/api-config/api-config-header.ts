@@ -1,6 +1,6 @@
-import { IncomingHttpHeaders } from 'http';
+import { type IncomingHttpHeaders } from 'http';
 
-import { z, ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import { RequestSchema } from './request-schema.js';
 

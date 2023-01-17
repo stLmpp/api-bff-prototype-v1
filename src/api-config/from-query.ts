@@ -1,7 +1,7 @@
-import { Request } from 'express';
-import { ParsedQs } from 'qs';
+import { type Request } from 'express';
+import { type ParsedQs } from 'qs';
 
-import { ApiConfigMappingParamSpecificReturn } from './api-config-param.js';
+import { type ApiConfigMappingParamSpecificReturn } from './api-config-param.js';
 
 type FromQueryFunction = (
   params: ParsedQs

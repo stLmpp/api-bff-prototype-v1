@@ -1,7 +1,7 @@
-import { ZodError, ZodIssue } from 'zod';
+import { type ZodError, type ZodIssue } from 'zod';
 
-import { ErrorResponseErrorObject } from './error-response.js';
-import { ParamType } from './param-type.js';
+import { type ErrorResponseErrorObject } from './error-response.js';
+import { type ParamType } from './param-type.js';
 
 export function fromZodErrorToErroResponseObjects(
   error: ZodError,

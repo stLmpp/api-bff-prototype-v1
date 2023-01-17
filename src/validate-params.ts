@@ -1,7 +1,7 @@
-import { ZodType } from 'zod';
+import { type ZodType } from 'zod';
 
-import { ErrorResponseErrorObject } from './error-response.js';
-import { ParamType } from './param-type.js';
+import { type ErrorResponseErrorObject } from './error-response.js';
+import { type ParamType } from './param-type.js';
 import { fromZodErrorToErroResponseObjects } from './zod-error-formatter.js';
 
 export async function validateParams(

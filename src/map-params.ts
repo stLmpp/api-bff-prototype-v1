@@ -1,6 +1,6 @@
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingParam } from './api-config/api-config-param.js';
+import { type ApiConfigMappingParam } from './api-config/api-config-param.js';
 import { mapGeneric } from './map-generic.js';
 
 export async function mapParams(

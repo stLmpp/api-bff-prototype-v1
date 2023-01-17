@@ -1,4 +1,4 @@
-import { Express } from 'express';
+import { type Express } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import { CachingResolver } from './caching/caching-resolver.js';

@@ -1,14 +1,18 @@
 import { generateSchema } from '@anatine/zod-openapi';
-import { ParameterLocation, ParameterObject, SchemaObject } from 'openapi3-ts';
+import {
+  type ParameterLocation,
+  type ParameterObject,
+  type SchemaObject,
+} from 'openapi3-ts';
 import { ZodObject } from 'zod';
 
 import {
-  ApiConfig,
-  ApiConfigMappingIn,
-  ApiConfigOpenapiRequest,
+  type ApiConfig,
+  type ApiConfigMappingIn,
+  type ApiConfigOpenapiRequest,
 } from '../api-config/api-config.js';
-import { Entries } from '../entries.js';
-import { ParamType } from '../param-type.js';
+import { type Entries } from '../entries.js';
+import { type ParamType } from '../param-type.js';
 
 type Parameters = Record<
   Exclude<ParamType, 'body'>,

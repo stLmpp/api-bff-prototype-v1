@@ -1,8 +1,8 @@
-import { IncomingHttpHeaders } from 'http';
+import { type IncomingHttpHeaders } from 'http';
 
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingHeadersSpecificReturn } from './api-config-header.js';
+import { type ApiConfigMappingHeadersSpecificReturn } from './api-config-header.js';
 
 type FromHeaderFunction = (
   params: IncomingHttpHeaders

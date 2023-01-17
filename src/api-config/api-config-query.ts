@@ -1,5 +1,5 @@
-import { ParsedQs } from 'qs';
-import { z, ZodType } from 'zod';
+import { type ParsedQs } from 'qs';
+import { z, type ZodType } from 'zod';
 
 import { RequestSchema } from './request-schema.js';
 

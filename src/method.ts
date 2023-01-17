@@ -7,3 +7,5 @@ export const MethodSchema = z.union([
   z.literal('PATCH'),
   z.literal('DELETE'),
 ]);
+
+export type Method = z.infer<typeof MethodSchema>;

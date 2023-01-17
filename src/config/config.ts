@@ -23,6 +23,10 @@ const ConfigSchema = z.object(
       .default('src/app/routes'),
     caching: ConfigCachingSchema.optional(),
     openapi: ConfigOpenapiSchema.optional(),
+    httpClient: zPossibleEnv
+      .string(z.union([z.literal('got'), z.literal('axios')]))
+      .optional()
+      .default('got'),
   },
   {
     required_error: 'API BFF Config file is required',

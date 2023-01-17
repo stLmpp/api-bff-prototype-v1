@@ -170,7 +170,8 @@ module.exports = {
     ],
     'import/newline-after-import': ['error'],
     '@typescript-eslint/no-magic-numbers': ['error'],
-    '@typescript-eslint/no-explicit-any': ['error']
+    '@typescript-eslint/no-explicit-any': ['error'],
+    '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }]
   },
   settings: {
     'import/resolver': {

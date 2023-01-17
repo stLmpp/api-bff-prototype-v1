@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ApiConfig } from '../../../../api-config/api-config.js';
+import { type ApiConfig } from '../../../../api-config/api-config.js';
 
 export default {
   host: 'jsonplaceholder.typicode.com',
@@ -13,7 +13,6 @@ export default {
           id: z.number(),
           title: z.string(),
           completed: z.boolean(),
-          extra: z.string(),
         })
       ),
     },

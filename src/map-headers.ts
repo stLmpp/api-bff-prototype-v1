@@ -1,8 +1,8 @@
-import { IncomingHttpHeaders } from 'http';
+import { type IncomingHttpHeaders } from 'http';
 
-import { Request } from 'express';
+import { type Request } from 'express';
 
-import { ApiConfigMappingHeaders } from './api-config/api-config-header.js';
+import { type ApiConfigMappingHeaders } from './api-config/api-config-header.js';
 import { mapGeneric } from './map-generic.js';
 
 export async function mapHeaders(
@@ -14,13 +14,13 @@ export async function mapHeaders(
   }
   const { headers } = req;
   if (typeof mapping === 'function') {
-    return _mapHeaders(await mapping(headers, req));
+    return formatHeaders(await mapping(headers, req));
   }
   const object = await mapGeneric(mapping, headers, req);
-  return _mapHeaders(object ?? {});
+  return formatHeaders(object ?? {});
 }
 
-function _mapHeaders(
+export function formatHeaders(
   headers: IncomingHttpHeaders | Record<string, unknown>
 ): Record<string, string> {
   const initialValue: Record<string, string> = {};

@@ -1,21 +1,31 @@
 import { join } from 'node:path';
 
 import compression from 'compression';
-import express, { Express, json, RequestHandler, Router } from 'express';
+import express, {
+  type Express,
+  json,
+  type RequestHandler,
+  Router,
+} from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
-import { PathItemObject, PathsObject } from 'openapi3-ts';
+import { type PathItemObject, type PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
 import { CachingResolver } from './caching/caching-resolver.js';
 import {
-  ConfigCaching,
+  type ConfigCaching,
   ConfigCachingPathSchema,
 } from './config/config-caching.js';
 import { getConfig } from './config/config.js';
 import { ErrorCodes } from './error-codes.js';
-import { ErrorResponse, ErrorResponseErrorObject } from './error-response.js';
+import {
+  type ErrorResponse,
+  type ErrorResponseErrorObject,
+} from './error-response.js';
+import { getHttpClient } from './http-client/get-http-client.js';
+import { type HttpClientRequestOptions } from './http-client/http-client.js';
 import { internalConfiguration } from './internal-configuration.js';
 import { mapBody } from './map-body.js';
 import { mapHeaders } from './map-headers.js';
@@ -115,8 +125,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         }
         newPathName = newPathName.replace(paramKey, paramValue);
       }
-      const requestOptions: RequestInit = {
-        method: req.method,
+      const requestOptions: HttpClientRequestOptions = {
+        method,
         headers,
       };
       const bodyZodSchema = openapi?.request?.body;
@@ -179,8 +189,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           cacheUsed = true;
         }
       }
-      // TODO use a library to fetch data
-      const response = await fetch(url, requestOptions);
+      const httpClient = await getHttpClient();
+      const response = await httpClient.request(url, requestOptions);
       if (!response.ok) {
         if (cacheUsed) {
           return;

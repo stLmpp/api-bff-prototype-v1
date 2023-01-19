@@ -5,7 +5,7 @@ import fastGlob from 'fast-glob';
 import { parse } from 'yaml';
 import { z } from 'zod';
 
-import { fromZodIssuePathToString } from '../zod-error-formatter.js';
+import { fromZodErrorToErrorResponseObjects } from '../zod-error-formatter.js';
 
 import { ConfigCachingSchema } from './config-caching.js';
 import { ConfigOpenapiSchema } from './config-openapi.js';
@@ -52,13 +52,13 @@ async function parseAndAssertConfig(
   const fileParsed = resolver(config);
   const zodParsed = await ConfigSchema.safeParseAsync(fileParsed);
   if (!zodParsed.success) {
+    const errors = fromZodErrorToErrorResponseObjects(zodParsed.error, 'body');
     throw new Error(
       `API BFF Config not valid.\n` +
         `Errors:\n` +
-        ` - ${zodParsed.error.errors.map(
-          (issue) =>
-            `${fromZodIssuePathToString(issue.path)} ${issue.message}\n`
-        )}`
+        `${errors
+          .map((error) => `- "${error.path}" ${error.message}`)
+          .join('\n')}`
     );
   }
   return zodParsed.data;

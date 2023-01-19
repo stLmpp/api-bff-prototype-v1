@@ -36,7 +36,7 @@ import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
 import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
-import { fromZodErrorToErroResponseObjects } from './zod-error-formatter.js';
+import { fromZodErrorToErrorResponseObjects } from './zod-error-formatter.js';
 
 globalThis.PROD ??= false;
 
@@ -210,7 +210,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
             error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
             status: StatusCodes.MISDIRECTED_REQUEST,
             message: 'The response from the server has data validation errors',
-            errors: fromZodErrorToErroResponseObjects(
+            errors: fromZodErrorToErrorResponseObjects(
               parsedResponse.error,
               'body'
             ),

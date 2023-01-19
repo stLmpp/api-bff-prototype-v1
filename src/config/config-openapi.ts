@@ -10,10 +10,9 @@ export const DEFAULT_OPENAPI_VALUES = {
 
 const ConfigOpenapiObjectExternalDocsSchema = z.object({
   url: zPossibleEnv.string(z.string().url()),
-  description: zPossibleEnv.string(z.string()),
+  description: zPossibleEnv.string(z.string()).optional(),
 });
 
-// TODO update config.schema.json
 export const ConfigOpenapiObjectSchema = z.object({
   path: zPossibleEnv
     .string(z.string())
@@ -54,7 +53,9 @@ export const ConfigOpenapiObjectSchema = z.object({
     )
     .optional(),
   externalDocs: ConfigOpenapiObjectExternalDocsSchema.optional(),
-  security: z.array(z.record(z.string(), z.array(z.string()))).optional(),
+  security: z
+    .array(z.record(z.string(), zPossibleEnv.string(z.string())))
+    .optional(),
 });
 
 export const ConfigOpenapiSchema = z.union([

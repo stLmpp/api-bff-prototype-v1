@@ -1,9 +1,9 @@
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
-import { type ApiConfig } from '../../../../../api-config/api-config.js';
-import { forward } from '../../../../../api-config/forward.js';
-import { schema } from '../../../../../openapi/schema.js';
+import { type ApiConfig } from '../../../../api-config/api-config.js';
+import { forward } from '../../../../api-config/forward.js';
+import { schema } from '../../../../openapi/schema.js';
 
 const MIN_ARRAY = 1;
 

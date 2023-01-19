@@ -17,7 +17,6 @@ const ApiConfigMappingInSchema = z.object({
 
 const ApiConfigMappingOutSchema = z.object({
   body: ApiConfigMappingBodySchema.optional(),
-  headers: ApiConfigMappingHeadersSchema.optional(),
 });
 
 const ApiConfigMappingSchema = z.object({

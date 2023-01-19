@@ -17,10 +17,6 @@ const ConfigSchema = z.object(
       .string(z.string())
       .optional()
       .transform((prefix) => prefix?.replace(/^(?!\/)/, '/') ?? ''),
-    routePath: zPossibleEnv
-      .string(z.string())
-      .optional()
-      .default('src/app/routes'),
     caching: ConfigCachingSchema.optional(),
     openapi: ConfigOpenapiSchema.optional(),
     httpClient: zPossibleEnv

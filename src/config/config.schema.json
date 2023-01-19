@@ -5,10 +5,6 @@
     "prefix": {
       "$ref": "#/$defs/EnvString"
     },
-    "routePath": {
-      "default": "src/app/routes",
-      "$ref": "#/$defs/EnvString"
-    },
     "caching": {
       "type": "object",
       "properties": {

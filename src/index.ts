@@ -38,9 +38,9 @@ import { getOperation } from './openapi/get-operation.js';
 import { validateParams } from './validate-params.js';
 import { fromZodErrorToErrorResponseObjects } from './zod-error-formatter.js';
 
-globalThis.PROD ??= false;
-
-const EXTENSION = PROD ? 'js' : 'ts';
+const EXTENSION = 'js';
+const DIST = 'dist';
+const ROUTES = `${DIST}/routes`;
 
 interface InitApiConfigResultMeta {
   method: string;
@@ -51,7 +51,7 @@ type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
 async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const globalConfig = await getConfig();
   const reqPath = path
-    .replace(globalConfig.routePath, '')
+    .replace(ROUTES, '')
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
   const method = MethodSchema.parse(
@@ -201,6 +201,11 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         return;
       }
       let data = await response.json();
+      if (mapping?.out?.body) {
+        // TODO map out body
+        // TODO map out body in case of errors
+      }
+      console.log(res.header);
       if (openapi?.response?.ok) {
         const parsedResponse = await openapi.response.ok.safeParseAsync(data);
         if (!parsedResponse.success) {
@@ -236,9 +241,8 @@ export async function createApplication(): Promise<Express> {
   const server = express().use(helmet()).use(compression()).use(json());
   const config = await getConfig();
   console.log('config', config);
-  const beginning = PROD ? 'dist/' : '';
   const middleGlob = '/**/{GET,POST,PUT,PATCH,DELETE}';
-  const globPath = `${beginning}${config.routePath}${middleGlob}.${EXTENSION}`;
+  const globPath = `${ROUTES}${middleGlob}.${EXTENSION}`;
   const paths = await fastGlob(globPath);
   const middlewares = await Promise.all(
     paths.map((path) => initApiConfig(path))

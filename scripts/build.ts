@@ -1,19 +1,15 @@
 import { build } from 'esbuild';
-import fastGlob from 'fast-glob';
 import { rimraf } from 'rimraf';
 
+import { getDefaultOptions } from './get-default-options.js';
+
 async function main(): Promise<void> {
-  await rimraf('dist');
-  const files = await fastGlob(['src/**/*.{ts,mts}', 'app/**/*.{ts,mts}']);
+  const [defaultOptions] = await Promise.all([
+    getDefaultOptions(),
+    rimraf('dist'),
+  ]);
   await build({
-    entryPoints: files,
-    platform: 'node',
-    outdir: 'dist',
-    format: 'esm',
-    minify: true,
-    define: {
-      PROD: 'true',
-    },
+    ...defaultOptions,
   });
 }
 

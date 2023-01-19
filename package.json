@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsx scripts/build.ts",
-    "start": "tsx watch src/app/main.ts"
+    "dev": "tsx scripts/watch.ts"
   },
   "keywords": [],
   "author": "",
@@ -36,7 +36,7 @@
     "@typescript-eslint/eslint-plugin": "~5.48.2",
     "@typescript-eslint/parser": "~5.48.2",
     "axios": "^1.2.3",
-    "esbuild": "~0.16.15",
+    "esbuild": "~0.17.3",
     "eslint": "~8.32.0",
     "eslint-import-resolver-typescript": "~3.5.3",
     "eslint-plugin-import": "~2.27.5",

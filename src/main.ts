@@ -1,4 +1,4 @@
-import { createApplication } from '../index.js';
+import { createApplication } from './index.js';
 
 createApplication().then((server) => {
   console.log('Listening on http://localhost:3000');

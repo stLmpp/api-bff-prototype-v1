@@ -1,7 +1,7 @@
 import { type Express } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-import { CachingResolver } from './caching/caching-resolver.js';
+import { getAllCachingStrategies } from './caching/caching-resolver.js';
 import { getConfig } from './config/config.js';
 
 export async function internalConfiguration(app: Express): Promise<Express> {
@@ -10,7 +10,7 @@ export async function internalConfiguration(app: Express): Promise<Express> {
     return app;
   }
   const caching = config.caching;
-  const cachingStrategies = CachingResolver.getAllCachingStrategies();
+  const cachingStrategies = getAllCachingStrategies();
   const endPoint = '/__bff-internal/invalidade-all-cache';
   console.log(`Registering end-point: [POST] ${endPoint}`);
   return app.post(endPoint, async (req, res) => {

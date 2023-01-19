@@ -9,11 +9,11 @@ import express, {
 } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
-import { StatusCodes, getReasonPhrase } from 'http-status-codes';
+import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
-import { CachingResolver } from './caching/caching-resolver.js';
+import { getCachingStrategy } from './caching/caching-resolver.js';
 import {
   type ConfigCaching,
   ConfigCachingPathSchema,
@@ -176,9 +176,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
         authorization: headers.authorization,
       })}`;
-      const cachingStrategy = CachingResolver.getCachingStrategy(
-        newCaching.type!
-      );
+      const cachingStrategy = getCachingStrategy(newCaching.type!);
       if (shouldCache) {
         const cachedValue = await cachingStrategy
           .get(cacheKey, newCaching)

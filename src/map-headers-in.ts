@@ -5,7 +5,7 @@ import { type Request } from 'express';
 import { type ApiConfigMappingHeaders } from './api-config/api-config-header.js';
 import { mapGeneric } from './map-generic.js';
 
-export async function mapHeaders(
+export async function mapHeadersIn(
   mapping: ApiConfigMappingHeaders | undefined,
   req: Request
 ): Promise<Record<string, string>> {

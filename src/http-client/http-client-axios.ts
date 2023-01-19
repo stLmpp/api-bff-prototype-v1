@@ -1,6 +1,6 @@
-import { type Axios, type AxiosRequestConfig } from 'axios';
+import { type Axios, type RawAxiosRequestConfig } from 'axios';
 
-import { formatHeaders } from '../map-headers.js';
+import { formatHeaders } from '../map-headers-in.js';
 
 import { HttpClient, type HttpClientRequestOptions } from './http-client.js';
 import { methodHasBody } from './method-has-body.js';
@@ -15,9 +15,10 @@ export class HttpClientAxios extends HttpClient {
     url: URL,
     options: HttpClientRequestOptions
   ): Promise<Response> {
-    const axiosOptions: AxiosRequestConfig = {
+    const axiosOptions: RawAxiosRequestConfig = {
       url: url.toString(),
       method: options.method,
+      headers: options.headers,
     };
     if (methodHasBody(options.method) && options.body != null) {
       axiosOptions.data = options.body;

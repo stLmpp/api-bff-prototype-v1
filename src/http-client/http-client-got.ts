@@ -1,6 +1,6 @@
 import type { Got, OptionsOfUnknownResponseBody } from 'got';
 
-import { formatHeaders } from '../map-headers.js';
+import { formatHeaders } from '../map-headers-in.js';
 
 import { HttpClient, type HttpClientRequestOptions } from './http-client.js';
 import { methodHasBody } from './method-has-body.js';

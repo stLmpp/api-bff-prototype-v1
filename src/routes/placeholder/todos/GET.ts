@@ -5,6 +5,11 @@ import { type ApiConfig } from '../../../api-config/api-config.js';
 export default {
   host: 'jsonplaceholder.typicode.com',
   path: 'todos',
+  mapping: {
+    out: {
+      ok: (body) => body,
+    },
+  },
   openapi: {
     response: {
       ok: z.array(

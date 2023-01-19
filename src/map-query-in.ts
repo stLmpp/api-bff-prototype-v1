@@ -3,7 +3,7 @@ import { type Request } from 'express';
 import { type ApiConfigMappingQuery } from './api-config/api-config-query.js';
 import { mapGeneric } from './map-generic.js';
 
-export async function mapQuery(
+export async function mapQueryIn(
   mapping: ApiConfigMappingQuery | undefined,
   req: Request
 ): Promise<Record<string, string>> {

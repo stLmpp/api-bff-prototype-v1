@@ -15,8 +15,35 @@ const ApiConfigMappingInSchema = z.object({
   headers: ApiConfigMappingHeadersSchema.optional(),
 });
 
+const ApiConfigMappingOutResponseReturnSchema = z.union([
+  z.unknown(),
+  z.promise(z.unknown()),
+]);
+const ApiConfigMappingOutResponseFunctionSchema = z
+  .function()
+  .args(z.unknown())
+  .returns(ApiConfigMappingOutResponseReturnSchema);
+
+export const ApiConfigMappingOutResponseSchema = z.union([
+  ApiConfigMappingOutResponseFunctionSchema,
+  z.record(
+    z.string(),
+    z.union([z.string(), ApiConfigMappingOutResponseFunctionSchema])
+  ),
+]);
+
+export type ApiConfigMappingOutResponse = z.infer<
+  typeof ApiConfigMappingOutResponseSchema
+>;
+
 const ApiConfigMappingOutSchema = z.object({
-  body: ApiConfigMappingBodySchema.optional(),
+  ok: ApiConfigMappingOutResponseSchema.optional(),
+  errors: z
+    .record(
+      z.union([ErrorResponseStatusCodeSchema, z.literal('default')]),
+      ApiConfigMappingOutResponseSchema
+    )
+    .optional(),
 });
 
 const ApiConfigMappingSchema = z.object({

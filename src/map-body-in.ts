@@ -3,7 +3,7 @@ import { type Request } from 'express';
 import { type ApiConfigMappingBody } from './api-config/api-config-body.js';
 import { mapGeneric } from './map-generic.js';
 
-export async function mapBody(
+export async function mapBodyIn(
   mapping: ApiConfigMappingBody | undefined,
   req: Request
 ): Promise<unknown> {

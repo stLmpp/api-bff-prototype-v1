@@ -27,10 +27,11 @@ import {
 import { getHttpClient } from './http-client/get-http-client.js';
 import { type HttpClientRequestOptions } from './http-client/http-client.js';
 import { internalConfiguration } from './internal-configuration.js';
-import { mapBody } from './map-body.js';
-import { mapHeaders } from './map-headers.js';
-import { mapParams } from './map-params.js';
-import { mapQuery } from './map-query.js';
+import { mapBodyIn } from './map-body-in.js';
+import { mapBodyOut } from './map-body-out.js';
+import { mapHeadersIn } from './map-headers-in.js';
+import { mapParamsIn } from './map-params-in.js';
+import { mapQueryIn } from './map-query-in.js';
 import { MethodSchema } from './method.js';
 import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
@@ -86,12 +87,12 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         return;
       }
       const [params, headers, body, query] = await Promise.all([
-        mapParams(mapping?.in?.params, req),
-        mapHeaders(mapping?.in?.headers, req),
+        mapParamsIn(mapping?.in?.params, req),
+        mapHeadersIn(mapping?.in?.headers, req),
         method === 'GET'
           ? Promise.resolve(undefined)
-          : mapBody(mapping?.in?.body, req),
-        mapQuery(mapping?.in?.query, req),
+          : mapBodyIn(mapping?.in?.body, req),
+        mapQueryIn(mapping?.in?.query, req),
       ]);
       let newPathName = pathname;
       const badRequestErrors: ErrorResponseErrorObject[] = [];
@@ -193,17 +194,20 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         if (cacheUsed) {
           return;
         }
-        res
-          .status(response.status)
-          .send(
-            (await response.json().catch(() => null)) ?? (await response.text())
-          );
+        let errorResponse =
+          (await response.json().catch(() => null)) ?? (await response.text());
+        const mappingOutError =
+          mapping?.out?.errors?.[response.status] ??
+          mapping?.out?.errors?.default;
+        if (mappingOutError) {
+          errorResponse = await mapBodyOut(mappingOutError, errorResponse);
+        }
+        res.status(response.status).send(errorResponse);
         return;
       }
       let data = await response.json();
-      if (mapping?.out?.body) {
-        // TODO map out body
-        // TODO map out body in case of errors
+      if (mapping?.out?.ok) {
+        data = await mapBodyOut(mapping.out.ok, data);
       }
       console.log(res.header);
       if (openapi?.response?.ok) {

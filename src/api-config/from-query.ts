@@ -1,11 +1,11 @@
 import { type Request } from 'express';
 import { type ParsedQs } from 'qs';
 
-import { type ApiConfigMappingParamSpecificReturn } from './api-config-param.js';
+import { type ApiConfigMappingQuerySpecificReturn } from './api-config-query.js';
 
 type FromQueryFunction = (
   params: ParsedQs
-) => ApiConfigMappingParamSpecificReturn;
+) => ApiConfigMappingQuerySpecificReturn;
 
 export function fromQuery(
   param: string | FromQueryFunction

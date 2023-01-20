@@ -49,6 +49,9 @@ export const ApiConfigMappingQuerySchema = z.union([
 export type ApiConfigMappingQuerySpecificFunction = z.infer<
   typeof ApiConfigMappingQuerySpecificFunctionSchema
 >;
+export type ApiConfigMappingQuerySpecificReturn = z.infer<
+  typeof ApiConfigMappingQuerySpecificReturnSchema
+>;
 export type ApiConfigMappingQuery = z.infer<typeof ApiConfigMappingQuerySchema>;
 export type ApiConfigMappingQueryObject = z.infer<
   typeof ApiConfigMappingQueryObjectSchema

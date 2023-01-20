@@ -8,11 +8,11 @@ import { getDefaultOptions } from './get-default-options.js';
 const devPlugin = {
   name: 'dev',
   setup: (build) => {
-    let program: ChildProcess | null = null;
+    let nodeProgram: ChildProcess | null = null;
     const clearProgram = () => {
-      if (program) {
-        program.kill();
-        program = null;
+      if (nodeProgram) {
+        nodeProgram.kill();
+        nodeProgram = null;
       }
     };
     build.onEnd((buildResult) => {
@@ -21,7 +21,7 @@ const devPlugin = {
         return;
       }
       console.log('Build finished, starting program');
-      program = spawn('node', ['dist/main.js'], {
+      nodeProgram = spawn('node', ['dist/main.js'], {
         env: process.env,
         stdio: 'inherit',
       });

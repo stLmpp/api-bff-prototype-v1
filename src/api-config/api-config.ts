@@ -1,108 +1,231 @@
-import { z, type ZodObject, ZodString, type ZodType } from 'zod';
+import { type Request } from 'express';
+import { type ConditionalKeys, type RequireExactlyOne } from 'type-fest';
+import {
+  z,
+  type ZodObject,
+  type ZodOptional,
+  type ZodString,
+  type ZodType,
+} from 'zod';
 
 import { ConfigCachingSchema } from '../config/config-caching.js';
 import { ErrorResponseStatusCodeSchema } from '../error-response.js';
+import { type OrPromise } from '../or-promise.js';
 
-import { ApiConfigMappingBodySchema } from './api-config-body.js';
-import { ApiConfigMappingHeadersSchema } from './api-config-header.js';
-import { ApiConfigMappingParamSchema } from './api-config-param.js';
-import { ApiConfigMappingQuerySchema } from './api-config-query.js';
-import { ApiConfigValidationSchema } from './api-config-validation.js';
-import express, { Request } from 'express';
-import { ConditionalKeys, RequireExactlyOne } from 'type-fest';
+import { RequestSchema } from './request-schema.js';
 
-const ApiConfigMappingInSchema = z.object({
-  body: ApiConfigMappingBodySchema.optional(),
-  query: ApiConfigMappingQuerySchema.optional(),
-  params: ApiConfigMappingParamSchema.optional(),
-  headers: ApiConfigMappingHeadersSchema.optional(),
-});
+const ApiConfigValidationBody: ZodType<ZodType> = z.any();
 
-const ApiConfigMappingOutResponseReturnSchema = z.union([
-  z.unknown(),
-  z.promise(z.unknown()),
+const ApiConfigRequestValidationParams: ZodType<
+  ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
+> = z.any();
+
+const ApiConfigRequestValidationOtherParams: ZodType<
+  ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
+> = z.any();
+
+const ApiConfigValidationErrors = z.union([
+  z.record(ErrorResponseStatusCodeSchema, ApiConfigValidationBody),
+  z.object({
+    default: ApiConfigValidationBody.optional(),
+  }),
 ]);
-const ApiConfigMappingOutResponseFunctionSchema = z
-  .function()
-  .args(z.unknown())
-  .returns(ApiConfigMappingOutResponseReturnSchema);
 
-export const ApiConfigMappingOutResponseSchema = z.union([
-  ApiConfigMappingOutResponseFunctionSchema,
+const AnyPromiseSchema = z.union([z.any(), z.any().promise()]);
+
+const KeySchema = z.union([z.string(), z.number(), z.symbol()]);
+
+const ApiConfigRequestValidationMappingBodySchema = z.union([
+  z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
   z.record(
-    z.string(),
-    z.union([z.string(), ApiConfigMappingOutResponseFunctionSchema])
+    KeySchema,
+    z.union([
+      z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
+      z.union([
+        z.object({
+          body: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(AnyPromiseSchema),
+          ]),
+        }),
+        z.object({
+          param: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(AnyPromiseSchema),
+          ]),
+        }),
+        z.object({
+          query: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(AnyPromiseSchema),
+          ]),
+        }),
+        z.object({
+          header: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(AnyPromiseSchema),
+          ]),
+        }),
+      ]),
+    ])
   ),
 ]);
 
-export type ApiConfigMappingOutResponse = z.infer<
-  typeof ApiConfigMappingOutResponseSchema
+const OptionalStringPromise = z.union([
+  z.string().optional(),
+  z.string().optional().promise(),
+]);
+
+const ApiConfigRequestMappingParams = z.union([
+  z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
+  z.record(
+    KeySchema,
+    z.union([
+      KeySchema,
+      z.union([
+        z.object({
+          body: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(OptionalStringPromise),
+          ]),
+        }),
+        z.object({
+          param: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(OptionalStringPromise),
+          ]),
+        }),
+        z.object({
+          query: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(OptionalStringPromise),
+          ]),
+        }),
+        z.object({
+          header: z.union([
+            KeySchema,
+            z.function().args(z.any()).returns(OptionalStringPromise),
+          ]),
+        }),
+      ]),
+    ])
+  ),
+]);
+
+const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
+  z.function().args(z.any(), RequestSchema),
+  z.record(
+    KeySchema,
+    z.union([
+      z.function().args(z.any(), RequestSchema).returns(OptionalStringPromise),
+      KeySchema,
+      z.object({
+        body: z.union([
+          KeySchema,
+          z.function().args(z.any()).returns(OptionalStringPromise),
+        ]),
+      }),
+      z.object({
+        param: z.union([
+          KeySchema,
+          z.function().args(z.any()).returns(OptionalStringPromise),
+        ]),
+      }),
+      z.object({
+        query: z.union([
+          KeySchema,
+          z.function().args(z.any()).returns(OptionalStringPromise),
+        ]),
+      }),
+      z.object({
+        header: z.union([
+          KeySchema,
+          z.function().args(z.any()).returns(OptionalStringPromise),
+        ]),
+      }),
+    ])
+  ),
+]);
+
+const ApiConfigResponseMappingOkSchema = z.union([
+  z.function().args(z.any()).returns(AnyPromiseSchema),
+  z.record(
+    KeySchema,
+    z.union([KeySchema, z.function().args(z.any()).returns(AnyPromiseSchema)])
+  ),
+]);
+
+const ApiConfigResponseMappingErrorsSchema = z.union([
+  z.record(
+    ErrorResponseStatusCodeSchema,
+    z.function().args(z.any()).returns(AnyPromiseSchema)
+  ),
+  z.object({
+    default: z.function().args(z.any()).returns(AnyPromiseSchema).optional(),
+  }),
+]);
+
+const ApiConfigRequestMappingSchema = z.object({
+  body: ApiConfigRequestValidationMappingBodySchema.optional(),
+  params: ApiConfigRequestMappingParams.optional(),
+  query: ApiConfigRequestValidationMappingOtherParamsSchema.optional(),
+  headers: ApiConfigRequestValidationMappingOtherParamsSchema.optional(),
+});
+
+export type ApiConfigRequestMapping = z.infer<
+  typeof ApiConfigRequestMappingSchema
 >;
 
-const ApiConfigMappingOutSchema = z.object({
-  ok: ApiConfigMappingOutResponseSchema.optional(),
-  errors: z
-    .record(
-      z.union([ErrorResponseStatusCodeSchema, z.literal('default')]),
-      ApiConfigMappingOutResponseSchema
-    )
-    .optional(),
+const ApiConfigRequestValidationSchema = z.object({
+  body: ApiConfigValidationBody.optional(),
+  params: ApiConfigRequestValidationParams.optional(),
+  query: ApiConfigRequestValidationOtherParams.optional(),
+  headers: ApiConfigRequestValidationOtherParams.optional(),
 });
 
-const ApiConfigMappingSchema = z.object({
-  in: ApiConfigMappingInSchema.optional(),
-  out: ApiConfigMappingOutSchema.optional(),
-});
-
-const ApiConfigOpenapiParamsSchema: ZodType<
-  ZodObject<Record<string, ZodType>>
-> = z.any();
-const ApiConfigOpenapiBodySchema: ZodType<ZodType> = z.any();
-
-const ApiConfigOpenapiRequestSchema = z.object({
-  body: ApiConfigOpenapiBodySchema.optional(),
-  query: ApiConfigOpenapiParamsSchema.optional(),
-  params: ApiConfigOpenapiParamsSchema.optional(),
-  headers: ApiConfigOpenapiParamsSchema.optional(),
-});
-
-const ApiConfigOpenapiSchema = z.object({
-  summary: z.string().optional(),
-  description: z.string().optional(),
-  request: ApiConfigOpenapiRequestSchema.optional(),
-  response: z
-    .object({
-      ok: ApiConfigOpenapiBodySchema.optional(),
-      errors: z
-        .array(
-          z.object({
-            statusCode: ErrorResponseStatusCodeSchema,
-            body: ApiConfigOpenapiBodySchema.optional(),
-          })
-        )
-        .optional(),
-    })
-    .optional(),
-});
+export type ApiConfigRequestValidation = z.infer<
+  typeof ApiConfigRequestValidationSchema
+>;
 
 export const ApiConfigSchema = z.object({
   host: z.string(),
   path: z.string(),
-  mapping: ApiConfigMappingSchema.optional(),
-  openapi: ApiConfigOpenapiSchema.optional(),
+  request: z
+    .object({
+      validation: ApiConfigRequestValidationSchema.optional(),
+      mapping: ApiConfigRequestMappingSchema.optional(),
+    })
+    .optional(),
+  response: z
+    .object({
+      validationProvider: z
+        .object({
+          ok: ApiConfigValidationBody.optional(),
+          errors: ApiConfigValidationErrors.optional(),
+        })
+        .optional(),
+      mapping: z
+        .object({
+          ok: ApiConfigResponseMappingOkSchema.optional(),
+          errors: ApiConfigResponseMappingErrorsSchema.optional(),
+        })
+        .optional(),
+      validation: z
+        .object({
+          ok: ApiConfigValidationBody.optional(),
+          errors: ApiConfigValidationErrors.optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   caching: z
     .union([ConfigCachingSchema.omit({ path: true }), z.literal(false)])
     .optional(),
-  validation: ApiConfigValidationSchema.optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export type ApiConfig = z.infer<typeof ApiConfigSchema>;
-export type ApiConfigMapping = z.infer<typeof ApiConfigMappingSchema>;
-export type ApiConfigMappingIn = z.infer<typeof ApiConfigMappingInSchema>;
-export type ApiConfigMappingOut = z.infer<typeof ApiConfigMappingOutSchema>;
-export type ApiConfigOpenapiRequest = z.infer<
-  typeof ApiConfigOpenapiRequestSchema
->;
 
 type IsParameter<Part> = Part extends `:${infer ParamName}` ? ParamName : never;
 type FilteredParts<Path> = Path extends `${infer PartA}/${infer PartB}`
@@ -112,165 +235,152 @@ type RouteParameters<Path> = {
   [Key in FilteredParts<Path>]: string;
 };
 
-type ValidationInOtherParamsType<T, Body, Params, Query, Headers> =
-  | ((params: T, req: Request) => Record<string, string | undefined>)
-  | {
-      [K in keyof T]:
-        | ((param: T[K], req: Request) => string | undefined)
-        | RequireExactlyOne<{
-            body:
-              | ConditionalKeys<Body, string | undefined>
-              | ((body: Body) => string | undefined);
-            param: keyof Body | ((params: Params) => string | undefined);
-            query: keyof Query | ((query: Query) => string | undefined);
-            header: keyof Headers | ((headers: Headers) => string | undefined);
-          }>;
-    }
+type RequestValidationMappingOtherParams<T, Body, Params, Query, Headers> =
+  | ((params: T, req: Request) => OrPromise<Record<string, string | undefined>>)
   | Record<
       string,
-      RequireExactlyOne<{
-        body:
-          | ConditionalKeys<Body, string | undefined>
-          | ((body: Body) => string | undefined);
-        param: keyof Body | ((params: Params) => string | undefined);
-        query: keyof Query | ((query: Query) => string | undefined);
-        header: keyof Headers | ((headers: Headers) => string | undefined);
-      }>
+      | keyof T
+      | ((params: T, req: Request) => OrPromise<string | undefined>)
+      | RequireExactlyOne<{
+          body:
+            | ConditionalKeys<Body, string | undefined>
+            | ((body: Body) => OrPromise<string | undefined>);
+          param:
+            | keyof Params
+            | ((params: Params) => OrPromise<string | undefined>);
+          query:
+            | keyof Query
+            | ((query: Query) => OrPromise<string | undefined>);
+          header:
+            | keyof Headers
+            | ((headers: Headers) => OrPromise<string | undefined>);
+        }>
     >;
 
-type ValidationInParamsType<RouteParams, Params, Body, Query, Headers> =
-  | ((params: Params, req: Request) => RouteParams)
-  | Required<
-      Record<
+type RequestValidationMappingParams<RouteParams, Params, Body, Query, Headers> =
+
+    | ((params: Params, req: Request) => OrPromise<RouteParams>)
+    | Record<
         keyof RouteParams,
         | keyof Params
         | RequireExactlyOne<{
             body:
               | ConditionalKeys<Body, string | undefined>
-              | ((body: Body) => string | undefined);
-            param: keyof Params | ((params: Params) => string | undefined);
-            query: keyof Query | ((query: Query) => string | undefined);
-            header: keyof Headers | ((headers: Headers) => string | undefined);
+              | ((body: Body) => OrPromise<string | undefined>);
+            param:
+              | keyof Params
+              | ((params: Params) => OrPromise<string | undefined>);
+            query:
+              | keyof Query
+              | ((query: Query) => OrPromise<string | undefined>);
+            header:
+              | keyof Headers
+              | ((headers: Headers) => OrPromise<string | undefined>);
           }>
-      >
-    >;
+      >;
 
-type ValidationInBodyType<Body, Params, Query, Headers> =
-  | ((body: Body, req: Request) => unknown)
+type RequestValidationMappingBody<Body, Params, Query, Headers> =
+  | ((body: Body, req: Request) => OrPromise<unknown>)
   | {
       [K in keyof Body]:
-        | ((param: Body[K], req: Request) => unknown)
+        | ((param: Body[K], req: Request) => OrPromise<unknown>)
         | RequireExactlyOne<{
-            body: keyof Body | ((body: Body) => unknown);
-            param: keyof Params | ((params: Params) => unknown);
-            query: keyof Query | ((query: Query) => unknown);
-            header: keyof Headers | ((headers: Headers) => unknown);
+            body: keyof Body | ((body: Body) => OrPromise<unknown>);
+            param: keyof Params | ((params: Params) => OrPromise<unknown>);
+            query: keyof Query | ((query: Query) => OrPromise<unknown>);
+            header: keyof Headers | ((headers: Headers) => OrPromise<unknown>);
           }>;
     }
   | Record<
       string,
       RequireExactlyOne<{
-        body: keyof Body | ((body: Body) => unknown);
-        param: keyof Params | ((params: Params) => unknown);
-        query: keyof Query | ((query: Query) => unknown);
-        header: keyof Headers | ((headers: Headers) => unknown);
+        body: keyof Body | ((body: Body) => OrPromise<unknown>);
+        param: keyof Params | ((params: Params) => OrPromise<unknown>);
+        query: keyof Query | ((query: Query) => OrPromise<unknown>);
+        header: keyof Headers | ((headers: Headers) => OrPromise<unknown>);
       }>
     >;
 
+type ResponseMappingOk<Body, OpenapiBody> =
+  | ((body: Body) => OpenapiBody)
+  | {
+      [K in keyof OpenapiBody]:
+        | ConditionalKeys<Body, OpenapiBody[K]>
+        | ((body: Body) => OpenapiBody[K]);
+    };
+
 export function apiConfig<
   Route extends string,
-  ValidationInBody extends ZodType,
-  ValidationInParams extends ZodObject<Record<string, ZodString>>,
-  ValidationInQuery extends ZodObject<Record<string, ZodString>>,
-  ValidationInHeaders extends ZodObject<Record<string, ZodString>>,
-  ValidationOutOk extends ZodType,
-  OpenapiOutOk extends ZodType,
-  RouteParams extends Record<string, string> = RouteParameters<Route>
+  RequestValidationBody extends ZodType,
+  RequestValidationParams extends ZodObject<Record<string, ZodString>>,
+  RequestValidationQuery extends ZodObject<
+    Record<string, ZodString | ZodOptional<ZodString>>
+  >,
+  RequestValidationHeaders extends ZodObject<
+    Record<string, ZodString | ZodOptional<ZodString>>
+  >,
+  ResponseValidationProviderOk extends ZodType,
+  ResponseValidationOk extends ZodType
 >(
-  config: Omit<ApiConfig, 'path' | 'mapping' | 'validation' | 'openapi'> & {
+  config: Omit<ApiConfig, 'path' | 'request' | 'response'> & {
     path: Route;
-    validation?: {
-      in?: {
-        body?: ValidationInBody;
-        params?: ValidationInParams;
-        query?: ValidationInQuery;
-        headers?: ValidationInHeaders;
+    request?: {
+      validation?: {
+        body?: RequestValidationBody;
+        params?: RequestValidationParams;
+        query?: RequestValidationQuery;
+        headers?: RequestValidationHeaders;
       };
-      out?: {
-        ok?: ValidationOutOk;
-        errors?: Record<number | 'default', ZodType>;
+      mapping?: {
+        body?: RequestValidationMappingBody<
+          z.infer<RequestValidationBody>,
+          z.infer<RequestValidationParams>,
+          z.infer<RequestValidationQuery>,
+          z.infer<RequestValidationHeaders>
+        >;
+        params?: RequestValidationMappingParams<
+          RouteParameters<Route>,
+          z.infer<RequestValidationParams>,
+          z.infer<RequestValidationBody>,
+          z.infer<RequestValidationQuery>,
+          z.infer<RequestValidationHeaders>
+        >;
+        query?: RequestValidationMappingOtherParams<
+          z.infer<RequestValidationQuery>,
+          z.infer<RequestValidationBody>,
+          z.infer<RequestValidationParams>,
+          z.infer<RequestValidationQuery>,
+          z.infer<RequestValidationHeaders>
+        >;
+        headers?: RequestValidationMappingOtherParams<
+          z.infer<RequestValidationHeaders>,
+          z.infer<RequestValidationBody>,
+          z.infer<RequestValidationParams>,
+          z.infer<RequestValidationQuery>,
+          z.infer<RequestValidationHeaders>
+        >;
       };
     };
-  } & {
-    openapi?: { out?: { ok?: OpenapiOutOk } };
-  } & {
-    mapping?: {
-      in?: {
-        body?: ValidationInBodyType<
-          z.infer<ValidationInBody>,
-          z.infer<ValidationInParams>,
-          z.infer<ValidationInQuery>,
-          z.infer<ValidationInHeaders>
-        >;
-        params?: ValidationInParamsType<
-          RouteParams,
-          z.infer<ValidationInParams>,
-          z.infer<ValidationInBody>,
-          z.infer<ValidationInQuery>,
-          z.infer<ValidationInHeaders>
-        >;
-        query?: ValidationInOtherParamsType<
-          z.infer<ValidationInQuery>,
-          z.infer<ValidationInBody>,
-          z.infer<ValidationInParams>,
-          z.infer<ValidationInQuery>,
-          z.infer<ValidationInHeaders>
-        >;
-        headers?: ValidationInOtherParamsType<
-          z.infer<ValidationInHeaders>,
-          z.infer<ValidationInBody>,
-          z.infer<ValidationInParams>,
-          z.infer<ValidationInQuery>,
-          z.infer<ValidationInHeaders>
-        >;
+    response?: {
+      validationProvider?: {
+        ok?: ResponseValidationProviderOk;
+        errors?: Partial<Record<number | 'default', ZodType>>; // TODO improve errors
       };
-      out?: {
-        ok?: (body: z.infer<ValidationOutOk>) => z.infer<OpenapiOutOk>;
-        errors?: Record<number | 'default', (body: unknown) => unknown>;
+      mapping?: {
+        ok?: ResponseMappingOk<
+          z.infer<ResponseValidationProviderOk>,
+          z.infer<ResponseValidationOk>
+        >;
+        errors?: Partial<
+          Record<number | 'default', (body: unknown) => OrPromise<unknown>>
+        >; // TODO improve errors
+      };
+      validation?: {
+        ok?: ResponseValidationOk;
+        errors?: Partial<Record<number, ZodType>>; // TODO improve errors
       };
     };
   }
-) {
+): ApiConfig {
   return config;
 }
-
-apiConfig({
-  path: 'todos/:id/:id2',
-  host: 'jsonplaceholder.typicode.com',
-  validation: {
-    in: {
-      body: z.object({
-        id: z.string(),
-        value: z.string(),
-      }),
-      params: z.object({
-        id: z.string(),
-      }),
-    },
-  },
-  mapping: {
-    in: {
-      body: {
-        id2: { body: 'id' },
-      },
-      params: (params) => ({
-        id2: params.id,
-        id: '',
-      }),
-    },
-  },
-});
-
-express().get('/:id', (req) => {
-  req.params.id;
-});

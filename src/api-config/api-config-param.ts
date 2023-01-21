@@ -33,6 +33,9 @@ export const ApiConfigMappingParamSchema = z.union([
 ]);
 
 export type ApiConfigMappingParam = z.infer<typeof ApiConfigMappingParamSchema>;
+export type ApiConfigMappingParamSpecificReturn = z.infer<
+  typeof ApiConfigMappingParamSpecificReturnSchema
+>;
 export type ApiConfigMappingParamObject = z.infer<
   typeof ApiConfigMappingParamObjectSchema
 >;

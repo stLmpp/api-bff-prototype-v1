@@ -1,27 +1,19 @@
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
-import { type ApiConfig } from '../../../../api-config/api-config.js';
+import { apiConfig } from '../../../../api-config/api-config.js';
 import { forward } from '../../../../api-config/forward.js';
 import { schema } from '../../../../openapi/schema.js';
 
 const MIN_ARRAY = 1;
 
-export default {
+export default apiConfig({
   host: 'jsonplaceholder.typicode.com',
   path: 'todos/:id',
-  mapping: {
-    in: {
-      params: {
-        id: forward(),
-      },
-      body: forward(),
-    },
-  },
-  openapi: {
-    description: 'POST TODOS',
-    summary: 'POST TODOS SUMMARY',
-    request: {
+  summary: 'POST TODOS SUMMARY',
+  description: 'POST TODOS',
+  request: {
+    validation: {
       body: schema(
         z.object({
           id: z.string(),
@@ -50,20 +42,22 @@ export default {
         authorization: z.string().optional(),
       }),
     },
-    response: {
+    mapping: {
+      params: {
+        id: 'id',
+      },
+      body: forward(),
+    },
+  },
+  response: {
+    validation: {
       ok: z.object({
         id: z.string(),
       }),
-      errors: [
-        {
-          statusCode: StatusCodes.BAD_REQUEST,
-          body: z.object({}),
-        },
-        {
-          statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-          body: z.object({}),
-        },
-      ],
+      errors: {
+        [StatusCodes.BAD_GATEWAY]: z.object({}),
+        [StatusCodes.INTERNAL_SERVER_ERROR]: z.object({}),
+      },
     },
   },
-} satisfies ApiConfig;
+});

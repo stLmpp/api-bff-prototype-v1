@@ -108,7 +108,10 @@
               "items": {
                 "type": "object",
                 "additionalProperties": {
-                  "$ref": "#/$defs/EnvString"
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }

@@ -53,9 +53,7 @@ export const ConfigOpenapiObjectSchema = z.object({
     )
     .optional(),
   externalDocs: ConfigOpenapiObjectExternalDocsSchema.optional(),
-  security: z
-    .array(z.record(z.string(), zPossibleEnv.string(z.string())))
-    .optional(),
+  security: z.array(z.record(z.string(), z.array(z.string()))).optional(),
 });
 
 export const ConfigOpenapiSchema = z.union([

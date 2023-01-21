@@ -8,7 +8,7 @@
   "openapi": {
     "title": "My API BFF",
     "description": "My description",
-    "security": [{ "teste": "teste" }, { "teste2": "teste2" }],
+    "security": [{ "teste": ["teste"] }, { "teste2": ["teste2"] }],
     "contact": {
       "email": "example@domain.com",
       "name": "example",

@@ -41,29 +41,30 @@ const ApiConfigRequestValidationMappingBodySchema = z.union([
     KeySchema,
     z.union([
       z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
+      KeySchema,
       z.union([
         z.object({
           body: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(AnyPromiseSchema),
+            z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
           ]),
         }),
         z.object({
           param: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(AnyPromiseSchema),
+            z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
           ]),
         }),
         z.object({
           query: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(AnyPromiseSchema),
+            z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
           ]),
         }),
         z.object({
           header: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(AnyPromiseSchema),
+            z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
           ]),
         }),
       ]),
@@ -82,29 +83,42 @@ const ApiConfigRequestMappingParams = z.union([
     KeySchema,
     z.union([
       KeySchema,
+      z.function().args(z.any(), RequestSchema).returns(OptionalStringPromise),
       z.union([
         z.object({
           body: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(OptionalStringPromise),
+            z
+              .function()
+              .args(z.any(), RequestSchema)
+              .returns(OptionalStringPromise),
           ]),
         }),
         z.object({
           param: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(OptionalStringPromise),
+            z
+              .function()
+              .args(z.any(), RequestSchema)
+              .returns(OptionalStringPromise),
           ]),
         }),
         z.object({
           query: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(OptionalStringPromise),
+            z
+              .function()
+              .args(z.any(), RequestSchema)
+              .returns(OptionalStringPromise),
           ]),
         }),
         z.object({
           header: z.union([
             KeySchema,
-            z.function().args(z.any()).returns(OptionalStringPromise),
+            z
+              .function()
+              .args(z.any(), RequestSchema)
+              .returns(OptionalStringPromise),
           ]),
         }),
       ]),
@@ -122,25 +136,37 @@ const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
       z.object({
         body: z.union([
           KeySchema,
-          z.function().args(z.any()).returns(OptionalStringPromise),
+          z
+            .function()
+            .args(z.any(), RequestSchema)
+            .returns(OptionalStringPromise),
         ]),
       }),
       z.object({
         param: z.union([
           KeySchema,
-          z.function().args(z.any()).returns(OptionalStringPromise),
+          z
+            .function()
+            .args(z.any(), RequestSchema)
+            .returns(OptionalStringPromise),
         ]),
       }),
       z.object({
         query: z.union([
           KeySchema,
-          z.function().args(z.any()).returns(OptionalStringPromise),
+          z
+            .function()
+            .args(z.any(), RequestSchema)
+            .returns(OptionalStringPromise),
         ]),
       }),
       z.object({
         header: z.union([
           KeySchema,
-          z.function().args(z.any()).returns(OptionalStringPromise),
+          z
+            .function()
+            .args(z.any(), RequestSchema)
+            .returns(OptionalStringPromise),
         ]),
       }),
     ])
@@ -244,16 +270,19 @@ type RequestValidationMappingOtherParams<T, Body, Params, Query, Headers> =
       | RequireExactlyOne<{
           body:
             | ConditionalKeys<Body, string | undefined>
-            | ((body: Body) => OrPromise<string | undefined>);
+            | ((body: Body, req: Request) => OrPromise<string | undefined>);
           param:
             | keyof Params
-            | ((params: Params) => OrPromise<string | undefined>);
+            | ((params: Params, req: Request) => OrPromise<string | undefined>);
           query:
             | keyof Query
-            | ((query: Query) => OrPromise<string | undefined>);
+            | ((query: Query, req: Request) => OrPromise<string | undefined>);
           header:
             | keyof Headers
-            | ((headers: Headers) => OrPromise<string | undefined>);
+            | ((
+                headers: Headers,
+                req: Request
+              ) => OrPromise<string | undefined>);
         }>
     >;
 
@@ -263,42 +292,47 @@ type RequestValidationMappingParams<RouteParams, Params, Body, Query, Headers> =
     | Record<
         keyof RouteParams,
         | keyof Params
+        | ((params: Params, req: Request) => OrPromise<string | undefined>)
         | RequireExactlyOne<{
             body:
               | ConditionalKeys<Body, string | undefined>
-              | ((body: Body) => OrPromise<string | undefined>);
+              | ((body: Body, req: Request) => OrPromise<string | undefined>);
             param:
               | keyof Params
-              | ((params: Params) => OrPromise<string | undefined>);
+              | ((
+                  params: Params,
+                  req: Request
+                ) => OrPromise<string | undefined>);
             query:
               | keyof Query
-              | ((query: Query) => OrPromise<string | undefined>);
+              | ((query: Query, req: Request) => OrPromise<string | undefined>);
             header:
               | keyof Headers
-              | ((headers: Headers) => OrPromise<string | undefined>);
+              | ((
+                  headers: Headers,
+                  req: Request
+                ) => OrPromise<string | undefined>);
           }>
       >;
 
 type RequestValidationMappingBody<Body, Params, Query, Headers> =
   | ((body: Body, req: Request) => OrPromise<unknown>)
-  | {
-      [K in keyof Body]:
-        | ((param: Body[K], req: Request) => OrPromise<unknown>)
-        | RequireExactlyOne<{
-            body: keyof Body | ((body: Body) => OrPromise<unknown>);
-            param: keyof Params | ((params: Params) => OrPromise<unknown>);
-            query: keyof Query | ((query: Query) => OrPromise<unknown>);
-            header: keyof Headers | ((headers: Headers) => OrPromise<unknown>);
-          }>;
-    }
   | Record<
       string,
-      RequireExactlyOne<{
-        body: keyof Body | ((body: Body) => OrPromise<unknown>);
-        param: keyof Params | ((params: Params) => OrPromise<unknown>);
-        query: keyof Query | ((query: Query) => OrPromise<unknown>);
-        header: keyof Headers | ((headers: Headers) => OrPromise<unknown>);
-      }>
+      | keyof Body
+      | ((body: Body, req: Request) => OrPromise<unknown>)
+      | RequireExactlyOne<{
+          body: keyof Body | ((body: Body, req: Request) => OrPromise<unknown>);
+          param:
+            | keyof Params
+            | ((params: Params, req: Request) => OrPromise<unknown>);
+          query:
+            | keyof Query
+            | ((query: Query, req: Request) => OrPromise<unknown>);
+          header:
+            | keyof Headers
+            | ((headers: Headers, req: Request) => OrPromise<unknown>);
+        }>
     >;
 
 type ResponseMappingOk<Body, OpenapiBody> =

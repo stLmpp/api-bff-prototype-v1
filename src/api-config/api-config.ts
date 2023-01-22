@@ -17,19 +17,17 @@ import { RequestSchema } from './request-schema.js';
 const ApiConfigValidationBody: ZodType<ZodType> = z.any();
 
 const ApiConfigRequestValidationParams: ZodType<
-  ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
+  ZodObject<Record<string, ZodString>>
 > = z.any();
 
 const ApiConfigRequestValidationOtherParams: ZodType<
   ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
 > = z.any();
 
-const ApiConfigValidationErrors = z.union([
-  z.record(ErrorResponseStatusCodeSchema, ApiConfigValidationBody),
-  z.object({
-    default: ApiConfigValidationBody.optional(),
-  }),
-]);
+const ApiConfigValidationErrors = z.record(
+  z.union([ErrorResponseStatusCodeSchema, z.string()]),
+  ApiConfigValidationBody
+);
 
 const AnyPromiseSchema = z.union([z.any(), z.any().promise()]);
 
@@ -181,15 +179,10 @@ const ApiConfigResponseMappingOkSchema = z.union([
   ),
 ]);
 
-const ApiConfigResponseMappingErrorsSchema = z.union([
-  z.record(
-    ErrorResponseStatusCodeSchema,
-    z.function().args(z.any()).returns(AnyPromiseSchema)
-  ),
-  z.object({
-    default: z.function().args(z.any()).returns(AnyPromiseSchema).optional(),
-  }),
-]);
+const ApiConfigResponseMappingErrorsSchema = z.record(
+  z.union([ErrorResponseStatusCodeSchema, z.string()]),
+  z.function().args(z.any()).returns(AnyPromiseSchema).optional()
+);
 
 const ApiConfigRequestMappingSchema = z.object({
   body: ApiConfigRequestValidationMappingBodySchema.optional(),
@@ -398,20 +391,27 @@ export function apiConfig<
     response?: {
       validationProvider?: {
         ok?: ResponseValidationProviderOk;
-        errors?: Partial<Record<number | 'default', ZodType>>; // TODO improve errors
+        errors?: {
+          [x: number]: ZodType;
+          default?: ZodType;
+        }; // TODO improve errors
       };
       mapping?: {
         ok?: ResponseMappingOk<
           z.infer<ResponseValidationProviderOk>,
           z.infer<ResponseValidationOk>
         >;
-        errors?: Partial<
-          Record<number | 'default', (body: unknown) => OrPromise<unknown>>
-        >; // TODO improve errors
+        errors?: {
+          [x: number]: (body: unknown) => OrPromise<unknown>;
+          default?: (body?: unknown) => OrPromise<unknown>;
+        }; // TODO improve errors
       };
       validation?: {
         ok?: ResponseValidationOk;
-        errors?: Partial<Record<number, ZodType>>; // TODO improve errors
+        errors?: {
+          [x: number]: ZodType;
+          default?: ZodType;
+        }; // TODO improve errors
       };
     };
   }

@@ -12,13 +12,15 @@ export async function mapQueryIn(
   }
   const { query } = req;
   if (typeof mapping === 'function') {
-    return _formatQuery(await mapping(query, req));
+    return formatQuery(await mapping(query, req));
   }
   const object = await mapGeneric(mapping, query, req);
-  return _formatQuery(object ?? {});
+  return formatQuery(object ?? {});
 }
 
-function _formatQuery(query: Record<string, unknown>): Record<string, string> {
+export function formatQuery(
+  query: Record<string, unknown>
+): Record<string, string> {
   return Object.entries(query).reduce(
     (acc, [key, value]) =>
       value != null ? { ...acc, [key]: String(value) } : acc,

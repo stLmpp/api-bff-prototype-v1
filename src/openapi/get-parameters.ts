@@ -9,7 +9,7 @@ import { ZodObject } from 'zod';
 import {
   type ApiConfig,
   type ApiConfigRequestMapping,
-  ApiConfigRequestValidation,
+  type ApiConfigRequestValidation,
 } from '../api-config/api-config.js';
 import { type Entries } from '../entries.js';
 import { type ParamType } from '../param-type.js';

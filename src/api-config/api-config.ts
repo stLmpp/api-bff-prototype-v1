@@ -24,7 +24,7 @@ const ApiConfigRequestValidationOtherParams: ZodType<
   ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
 > = z.any();
 
-const ApiConfigValidationErrors = z.record(
+const ApiConfigValidationErrorsSchema = z.record(
   z.union([ErrorResponseStatusCodeSchema, z.string()]),
   ApiConfigValidationBody
 );
@@ -33,7 +33,7 @@ const AnyPromiseSchema = z.union([z.any(), z.any().promise()]);
 
 const KeySchema = z.union([z.string(), z.number(), z.symbol()]);
 
-const ApiConfigRequestValidationMappingBodySchema = z.union([
+const ApiConfigRequestMappingBodySchema = z.union([
   z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
   z.record(
     KeySchema,
@@ -70,18 +70,24 @@ const ApiConfigRequestValidationMappingBodySchema = z.union([
   ),
 ]);
 
-const OptionalStringPromise = z.union([
+export type ApiConfigRequestMappingBody = z.infer<
+  typeof ApiConfigRequestMappingBodySchema
+>;
+
+const OptionalStringPromiseSchema = z.union([
   z.string().optional(),
   z.string().optional().promise(),
 ]);
 
-const ApiConfigRequestMappingParams = z.union([
+const StringPromiseSchema = z.union([z.string(), z.string().promise()]);
+
+const ApiConfigRequestMappingParamsSchema = z.union([
   z.function().args(z.any(), RequestSchema).returns(AnyPromiseSchema),
   z.record(
     KeySchema,
     z.union([
       KeySchema,
-      z.function().args(z.any(), RequestSchema).returns(OptionalStringPromise),
+      z.function().args(z.any(), RequestSchema).returns(StringPromiseSchema),
       z.union([
         z.object({
           body: z.union([
@@ -89,7 +95,7 @@ const ApiConfigRequestMappingParams = z.union([
             z
               .function()
               .args(z.any(), RequestSchema)
-              .returns(OptionalStringPromise),
+              .returns(StringPromiseSchema),
           ]),
         }),
         z.object({
@@ -98,7 +104,7 @@ const ApiConfigRequestMappingParams = z.union([
             z
               .function()
               .args(z.any(), RequestSchema)
-              .returns(OptionalStringPromise),
+              .returns(StringPromiseSchema),
           ]),
         }),
         z.object({
@@ -107,7 +113,7 @@ const ApiConfigRequestMappingParams = z.union([
             z
               .function()
               .args(z.any(), RequestSchema)
-              .returns(OptionalStringPromise),
+              .returns(StringPromiseSchema),
           ]),
         }),
         z.object({
@@ -116,7 +122,7 @@ const ApiConfigRequestMappingParams = z.union([
             z
               .function()
               .args(z.any(), RequestSchema)
-              .returns(OptionalStringPromise),
+              .returns(OptionalStringPromiseSchema),
           ]),
         }),
       ]),
@@ -124,12 +130,19 @@ const ApiConfigRequestMappingParams = z.union([
   ),
 ]);
 
-const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
+export type ApiConfigRequestMappingParams = z.infer<
+  typeof ApiConfigRequestMappingParamsSchema
+>;
+
+const ApiConfigRequestMappingOtherParamsSchema = z.union([
   z.function().args(z.any(), RequestSchema),
   z.record(
     KeySchema,
     z.union([
-      z.function().args(z.any(), RequestSchema).returns(OptionalStringPromise),
+      z
+        .function()
+        .args(z.any(), RequestSchema)
+        .returns(OptionalStringPromiseSchema),
       KeySchema,
       z.object({
         body: z.union([
@@ -137,7 +150,7 @@ const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
           z
             .function()
             .args(z.any(), RequestSchema)
-            .returns(OptionalStringPromise),
+            .returns(OptionalStringPromiseSchema),
         ]),
       }),
       z.object({
@@ -146,7 +159,7 @@ const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
           z
             .function()
             .args(z.any(), RequestSchema)
-            .returns(OptionalStringPromise),
+            .returns(OptionalStringPromiseSchema),
         ]),
       }),
       z.object({
@@ -155,7 +168,7 @@ const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
           z
             .function()
             .args(z.any(), RequestSchema)
-            .returns(OptionalStringPromise),
+            .returns(OptionalStringPromiseSchema),
         ]),
       }),
       z.object({
@@ -164,12 +177,16 @@ const ApiConfigRequestValidationMappingOtherParamsSchema = z.union([
           z
             .function()
             .args(z.any(), RequestSchema)
-            .returns(OptionalStringPromise),
+            .returns(OptionalStringPromiseSchema),
         ]),
       }),
     ])
   ),
 ]);
+
+export type ApiConfigRequestMappingOtherParams = z.infer<
+  typeof ApiConfigRequestMappingOtherParamsSchema
+>;
 
 const ApiConfigResponseMappingOkSchema = z.union([
   z.function().args(z.any()).returns(AnyPromiseSchema),
@@ -185,10 +202,10 @@ const ApiConfigResponseMappingErrorsSchema = z.record(
 );
 
 const ApiConfigRequestMappingSchema = z.object({
-  body: ApiConfigRequestValidationMappingBodySchema.optional(),
-  params: ApiConfigRequestMappingParams.optional(),
-  query: ApiConfigRequestValidationMappingOtherParamsSchema.optional(),
-  headers: ApiConfigRequestValidationMappingOtherParamsSchema.optional(),
+  body: ApiConfigRequestMappingBodySchema.optional(),
+  params: ApiConfigRequestMappingParamsSchema.optional(),
+  query: ApiConfigRequestMappingOtherParamsSchema.optional(),
+  headers: ApiConfigRequestMappingOtherParamsSchema.optional(),
 });
 
 export type ApiConfigRequestMapping = z.infer<
@@ -220,7 +237,7 @@ export const ApiConfigSchema = z.object({
       validationProvider: z
         .object({
           ok: ApiConfigValidationBody.optional(),
-          errors: ApiConfigValidationErrors.optional(),
+          errors: ApiConfigValidationErrorsSchema.optional(),
         })
         .optional(),
       mapping: z
@@ -232,7 +249,7 @@ export const ApiConfigSchema = z.object({
       validation: z
         .object({
           ok: ApiConfigValidationBody.optional(),
-          errors: ApiConfigValidationErrors.optional(),
+          errors: ApiConfigValidationErrorsSchema.optional(),
         })
         .optional(),
     })
@@ -285,26 +302,20 @@ type RequestValidationMappingParams<RouteParams, Params, Body, Query, Headers> =
     | Record<
         keyof RouteParams,
         | keyof Params
-        | ((params: Params, req: Request) => OrPromise<string | undefined>)
+        | ((params: Params, req: Request) => OrPromise<string>)
         | RequireExactlyOne<{
             body:
-              | ConditionalKeys<Body, string | undefined>
-              | ((body: Body, req: Request) => OrPromise<string | undefined>);
+              | ConditionalKeys<Body, string>
+              | ((body: Body, req: Request) => OrPromise<string>);
             param:
               | keyof Params
-              | ((
-                  params: Params,
-                  req: Request
-                ) => OrPromise<string | undefined>);
+              | ((params: Params, req: Request) => OrPromise<string>);
             query:
               | keyof Query
-              | ((query: Query, req: Request) => OrPromise<string | undefined>);
+              | ((query: Query, req: Request) => OrPromise<string>);
             header:
               | keyof Headers
-              | ((
-                  headers: Headers,
-                  req: Request
-                ) => OrPromise<string | undefined>);
+              | ((headers: Headers, req: Request) => OrPromise<string>);
           }>
       >;
 

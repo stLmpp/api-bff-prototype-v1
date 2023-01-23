@@ -35,5 +35,5 @@
     "termsOfService": "This is terms of service",
     "version": "1.0.0"
   },
-  "httpClient": "got"
+  "httpClient": "axios"
 }

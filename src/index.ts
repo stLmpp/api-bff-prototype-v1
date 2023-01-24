@@ -81,17 +81,19 @@ async function validateAndSendBadRequest<T, Z extends ZodType>({
 
 async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const globalConfig = await getConfig();
-  const reqPath = path
-    .replace(ROUTES, '')
+  const pathWithoutDist = path.replace(ROUTES, '');
+  const reqPath = pathWithoutDist
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
-  const method = MethodSchema.parse(
-    reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '')
-  );
+  const regexExtension = new RegExp(`\\.${EXTENSION}$`);
+  const method = MethodSchema.parse(reqPath.pop()!.replace(regexExtension, ''));
   const file = await import(join('file://', process.cwd(), path));
   const apiConfig = file.default;
+  const pathWithoutExtension = pathWithoutDist.replace(regexExtension, '');
   if (!apiConfig) {
-    throw new Error(`File ${path} does not have a default export`);
+    throw new Error(
+      `File ${pathWithoutExtension} does not have a default export`
+    );
   }
   const parsedApiConfig = await ApiConfigSchema.safeParseAsync(apiConfig);
   if (!parsedApiConfig.success) {
@@ -100,7 +102,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       'body'
     );
     throw new Error(
-      `File ${path} does not contain valid configuration.\n` +
+      `File ${pathWithoutExtension} does not contain valid configuration.\n` +
         `Errors:\n` +
         `${errors
           .map((error) => `- "${error.path}" ${error.message}`)
@@ -114,7 +116,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
     request,
     response,
   } = parsedApiConfig.data;
-  const endPoint = `${reqPath.join('/')}`;
+  const endPoint = reqPath.join('/');
   const operation = globalConfig.openapi
     ? getOperation(parsedApiConfig.data)
     : null;

@@ -1,4 +1,4 @@
-import { StatusCodes } from 'http-status-codes';
+import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { ParamTypeSchema } from './param-type.js';
@@ -19,13 +19,45 @@ export const ErrorResponseStatusCodeSchema = z
 
 export const ErrorResponseSchema = z.object({
   status: ErrorResponseStatusCodeSchema,
+  statusText: z.string(),
   errors: z.array(ErrorResponseErrorObjectSchema).optional(),
   error: z.string().optional(),
   code: z.string(),
   message: z.string(),
 });
 
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+type ErrorResponseInterface = Omit<
+  z.infer<typeof ErrorResponseSchema>,
+  'statusText'
+>;
+
+export class ErrorResponse implements ErrorResponseInterface {
+  constructor({
+    status,
+    errors,
+    error,
+    code,
+    message,
+  }: ErrorResponseInterface) {
+    this.status = status;
+    this.statusText = getReasonPhrase(status);
+    if (errors != null) {
+      this.errors = errors;
+    }
+    if (error != null) {
+      this.error = error;
+    }
+    this.code = code;
+    this.message = message;
+  }
+  status: number;
+  statusText: string;
+  errors?: ErrorResponseErrorObject[];
+  error?: string;
+  code: string;
+  message: string;
+}
+
 export type ErrorResponseErrorObject = z.infer<
   typeof ErrorResponseErrorObjectSchema
 >;

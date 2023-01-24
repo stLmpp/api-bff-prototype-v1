@@ -1,25 +1,29 @@
 import { z } from 'zod';
 
-import { type ApiConfig } from '../../../api-config/api-config.js';
+import { apiConfig } from '../../../api-config/api-config.js';
 
-export default {
+export default apiConfig({
   host: 'jsonplaceholder.typicode.com',
   path: 'todos',
-  mapping: {
-    out: {
-      ok: (body) => body,
-    },
+  response: {
+    providerValidation: z.array(
+      z.object({
+        userId: z.number(),
+        id: z.number(),
+        title: z.string(),
+        completed: z.boolean(),
+      })
+    ),
+    mapping: (items) =>
+      items.map((item) => ({ ...item, isBffResponse: 'yes' })),
+    validation: z.array(
+      z.object({
+        userId: z.number(),
+        id: z.number(),
+        title: z.string(),
+        completed: z.boolean(),
+        isBffResponse: z.string(),
+      })
+    ),
   },
-  openapi: {
-    response: {
-      ok: z.array(
-        z.object({
-          userId: z.number(),
-          id: z.number(),
-          title: z.string(),
-          completed: z.boolean(),
-        })
-      ),
-    },
-  },
-} satisfies ApiConfig;
+});

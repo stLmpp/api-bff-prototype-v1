@@ -1,6 +1,7 @@
-import { type Axios, type RawAxiosRequestConfig } from 'axios';
+import { type Axios, AxiosError, type RawAxiosRequestConfig } from 'axios';
+import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
-import { formatHeaders } from '../map-headers-in.js';
+import { formatHeaders } from '../format-headers.js';
 
 import { HttpClient, type HttpClientRequestOptions } from './http-client.js';
 import { methodHasBody } from './method-has-body.js';
@@ -23,12 +24,34 @@ export class HttpClientAxios extends HttpClient {
     if (methodHasBody(options.method) && options.body != null) {
       axiosOptions.data = options.body;
     }
-    const response = await this.axios.request(axiosOptions);
-    const body = validateBody(response.data);
-    return new Response(body, {
-      headers: formatHeaders(response.headers),
-      status: response.status,
-      statusText: response.statusText,
-    });
+    let response: Response;
+    try {
+      const axiosResponse = await this.axios.request(axiosOptions);
+      const body = validateBody(axiosResponse.data);
+      response = new Response(body, {
+        headers: formatHeaders(axiosResponse.headers),
+        status: axiosResponse.status,
+        statusText: axiosResponse.statusText,
+      });
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        const statusCode =
+          error.response?.status ??
+          error.status ??
+          StatusCodes.INTERNAL_SERVER_ERROR;
+        response = new Response(error.response?.data ?? error.cause, {
+          headers: formatHeaders(error.response?.headers ?? {}),
+          status: statusCode,
+          statusText: getReasonPhrase(statusCode),
+        });
+      } else {
+        response = new Response(null, {
+          headers: {},
+          status: StatusCodes.INTERNAL_SERVER_ERROR,
+          statusText: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+        });
+      }
+    }
+    return response;
   }
 }

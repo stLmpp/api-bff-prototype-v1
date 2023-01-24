@@ -9,8 +9,9 @@ import express, {
 } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
-import { getReasonPhrase, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
+import { type z, type ZodType } from 'zod';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
 import { getCachingStrategy } from './caching/caching-resolver.js';
@@ -20,23 +21,25 @@ import {
 } from './config/config-caching.js';
 import { getConfig } from './config/config.js';
 import { ErrorCodes } from './error-codes.js';
-import {
-  type ErrorResponse,
-  type ErrorResponseErrorObject,
-} from './error-response.js';
+import { errorMiddleware } from './error-middleware.js';
+import { ErrorResponse } from './error-response.js';
+import { formatHeaders } from './format-headers.js';
+import { formatQuery } from './format-query.js';
+import { getProviderValidationErrorResponse } from './get-provider-validation-error-response.js';
 import { getHttpClient } from './http-client/get-http-client.js';
 import { type HttpClientRequestOptions } from './http-client/http-client.js';
+import { methodHasBody } from './http-client/method-has-body.js';
 import { internalConfiguration } from './internal-configuration.js';
-import { mapBodyIn } from './map-body-in.js';
-import { mapBodyOut } from './map-body-out.js';
-import { mapHeadersIn } from './map-headers-in.js';
-import { mapParamsIn } from './map-params-in.js';
-import { mapQueryIn } from './map-query-in.js';
+import { mapRequestBody } from './map-request-body.js';
+import { mapRequestOtherParams } from './map-request-other-params.js';
+import { mapRequestParams } from './map-request-params.js';
+import { mapResponseBody } from './map-response-body.js';
 import { MethodSchema } from './method.js';
 import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
+import { formatEndPoint } from './openapi/format-end-point.js';
 import { getOperation } from './openapi/get-operation.js';
-import { validateParams } from './validate-params.js';
+import { type ParamType } from './param-type.js';
 import { fromZodErrorToErrorResponseObjects } from './zod-error-formatter.js';
 
 const EXTENSION = 'js';
@@ -49,33 +52,68 @@ interface InitApiConfigResultMeta {
 }
 type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
 
+async function validateAndSendBadRequest<T, Z extends ZodType>({
+  type,
+  schema,
+  data,
+}: {
+  data: T;
+  schema?: Z;
+  type: ParamType;
+}): Promise<T | z.infer<Z>> {
+  if (!schema) {
+    return data;
+  }
+  const parsedData = await schema.safeParseAsync(data);
+  if (!parsedData.success) {
+    throw new ErrorResponse({
+      status: StatusCodes.BAD_REQUEST,
+      errors: fromZodErrorToErrorResponseObjects(parsedData.error, type),
+      message: 'Invalid parameters', // TODO better error message
+      code: ErrorCodes.BadRequest,
+    });
+  }
+  return parsedData.data;
+}
+
 async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const globalConfig = await getConfig();
-  const reqPath = path
-    .replace(ROUTES, '')
+  const pathWithoutDist = path.replace(ROUTES, '');
+  const reqPath = pathWithoutDist
     .split('/')
     .map((part) => part.replace('[', ':').replace(/]$/, ''));
-  const method = MethodSchema.parse(
-    reqPath.pop()!.replace(new RegExp(`\\.${EXTENSION}$`), '')
-  );
+  const regexExtension = new RegExp(`\\.${EXTENSION}$`);
+  const method = MethodSchema.parse(reqPath.pop()!.replace(regexExtension, ''));
   const file = await import(join('file://', process.cwd(), path));
   const apiConfig = file.default;
+  const pathWithoutExtension = pathWithoutDist.replace(regexExtension, '');
   if (!apiConfig) {
-    throw new Error(`File ${path} does not have a default export`);
+    throw new Error(
+      `File ${pathWithoutExtension} does not have a default export`
+    );
   }
   const parsedApiConfig = await ApiConfigSchema.safeParseAsync(apiConfig);
   if (!parsedApiConfig.success) {
-    // TODO better error message
-    throw new Error(`File ${path} does not contain valid configuration`);
+    const errors = fromZodErrorToErrorResponseObjects(
+      parsedApiConfig.error,
+      'body'
+    );
+    throw new Error(
+      `File ${pathWithoutExtension} does not contain valid configuration.\n` +
+        `Errors:\n` +
+        `${errors
+          .map((error) => `- "${error.path}" ${error.message}`)
+          .join('\n')}`
+    );
   }
   const {
     host,
     path: pathname,
-    mapping,
-    openapi,
     caching,
+    request,
+    response,
   } = parsedApiConfig.data;
-  const endPoint = `${reqPath.join('/')}`;
+  const endPoint = reqPath.join('/');
   const operation = globalConfig.openapi
     ? getOperation(parsedApiConfig.data)
     : null;
@@ -86,68 +124,71 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         next();
         return;
       }
-      const [params, headers, body, query] = await Promise.all([
-        mapParamsIn(mapping?.in?.params, req),
-        mapHeadersIn(mapping?.in?.headers, req),
-        method === 'GET'
-          ? Promise.resolve(undefined)
-          : mapBodyIn(mapping?.in?.body, req),
-        mapQueryIn(mapping?.in?.query, req),
-      ]);
+      res.setHeader('x-api-bff', 'true');
+      let params = await validateAndSendBadRequest({
+        data: req.params,
+        schema: request?.validation?.params,
+        type: 'params',
+      });
+      if (request?.mapping?.params) {
+        params = await mapRequestParams(request.mapping.params, params, req);
+      }
+      const formattedQuery = formatQuery(req.query);
+      const parsedQuery = await validateAndSendBadRequest({
+        data: formattedQuery,
+        type: 'query',
+        schema: request?.validation?.query,
+      });
+      let query: Record<string, string> = {};
+      if (request?.mapping?.query) {
+        query = formatQuery(parsedQuery);
+        query = await mapRequestOtherParams(
+          request.mapping.query,
+          formatQuery(parsedQuery),
+          req
+        );
+      }
+
+      const formattedHeaders = formatHeaders(req.headers);
+      const parsedHeaders = await validateAndSendBadRequest({
+        data: formattedHeaders,
+        type: 'headers',
+        schema: request?.validation?.headers,
+      });
+      let headers: Record<string, string> = {};
+      if (request?.mapping?.headers) {
+        headers = await mapRequestOtherParams(
+          request.mapping.headers,
+          formatHeaders(parsedHeaders),
+          req
+        );
+      }
+      let body: unknown | null = null;
+      if (methodHasBody(method)) {
+        const parsedBody = await validateAndSendBadRequest({
+          data: req.body,
+          schema: request?.validation?.body,
+          type: 'body',
+        });
+        if (request?.mapping?.body) {
+          body = await mapRequestBody(request.mapping.body, parsedBody, req);
+        }
+      }
       let newPathName = pathname;
-      const badRequestErrors: ErrorResponseErrorObject[] = [];
-      const headerSchema = openapi?.request?.headers;
-      if (headerSchema) {
-        const errors = await validateParams(headerSchema, headers, 'headers');
-        badRequestErrors.push(...errors);
-      }
-      const querySchema = openapi?.request?.query;
-      if (querySchema) {
-        const errors = await validateParams(querySchema, query, 'query');
-        badRequestErrors.push(...errors);
-      }
-      const paramsSchema = openapi?.request?.params;
-      if (paramsSchema) {
-        const errors = await validateParams(paramsSchema, params, 'params');
-        badRequestErrors.push(...errors);
-      }
       for (const paramKey of endPoint.split('/')) {
         if (!paramKey.startsWith(':')) {
           continue;
         }
         const paramKeyParsed = paramKey.replace(/^:/, '');
         const paramValue = params[paramKeyParsed];
-        if (paramValue == null) {
-          badRequestErrors.push({
-            path: paramKeyParsed,
-            message: `${paramKeyParsed} is required`,
-            type: 'params',
-          });
-        }
         newPathName = newPathName.replace(paramKey, paramValue);
       }
       const requestOptions: HttpClientRequestOptions = {
         method,
         headers,
       };
-      const bodyZodSchema = openapi?.request?.body;
-      if (bodyZodSchema) {
-        const errors = await validateParams(bodyZodSchema, body, 'body');
-        badRequestErrors.push(...errors);
-      }
       if (body) {
-        requestOptions.body = JSON.stringify(body);
-      }
-      if (badRequestErrors.length) {
-        const errorResponse = {
-          status: StatusCodes.BAD_REQUEST,
-          errors: badRequestErrors,
-          error: getReasonPhrase(StatusCodes.BAD_REQUEST),
-          message: 'Invalid parameters', // TODO better error message
-          code: ErrorCodes.BadRequest,
-        } satisfies ErrorResponse;
-        res.status(StatusCodes.BAD_REQUEST).send(errorResponse);
-        return;
+        requestOptions.body = body;
       }
       const urlSearchParams = new URLSearchParams(query);
       const url = new URL(newPathName, `https://${host}`);
@@ -174,6 +215,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       ) satisfies ConfigCaching;
       let cacheUsed = false;
       // TODO define what will compose the cache key
+      // TODO the keys will be defined by the user after the config.json refactor
+      // TODO change api-bff.json to bff-config.ts
       const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
         authorization: headers.authorization,
       })}`;
@@ -189,42 +232,39 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         }
       }
       const httpClient = await getHttpClient();
-      const response = await httpClient.request(url, requestOptions);
-      if (!response.ok) {
+      const httpResponse = await httpClient.request(url, requestOptions);
+      if (!httpResponse.ok) {
         if (cacheUsed) {
           return;
         }
-        let errorResponse =
-          (await response.json().catch(() => null)) ?? (await response.text());
-        const mappingOutError =
-          mapping?.out?.errors?.[response.status] ??
-          mapping?.out?.errors?.default;
-        if (mappingOutError) {
-          errorResponse = await mapBodyOut(mappingOutError, errorResponse);
-        }
-        res.status(response.status).send(errorResponse);
-        return;
+        // TODO improve error message
+        throw new ErrorResponse({
+          status: httpResponse.status,
+          code: ErrorCodes.ProviderError,
+          message: 'Improve this message',
+        });
       }
-      let data = await response.json();
-      if (mapping?.out?.ok) {
-        data = await mapBodyOut(mapping.out.ok, data);
-      }
-      console.log(res.header);
-      if (openapi?.response?.ok) {
-        const parsedResponse = await openapi.response.ok.safeParseAsync(data);
+      let data = await httpResponse.json();
+      if (response?.providerValidation) {
+        const parsedResponse = await response.providerValidation.safeParseAsync(
+          data
+        );
         if (!parsedResponse.success) {
-          const error: ErrorResponse = {
-            error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
-            status: StatusCodes.MISDIRECTED_REQUEST,
-            message: 'The response from the server has data validation errors',
-            errors: fromZodErrorToErrorResponseObjects(
-              parsedResponse.error,
-              'body'
-            ),
-            code: ErrorCodes.ResponseValidationError,
-          };
-          res.status(StatusCodes.MISDIRECTED_REQUEST).send(error);
-          return;
+          throw getProviderValidationErrorResponse(
+            fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+          );
+        }
+        data = parsedResponse.data;
+      }
+      if (response?.mapping) {
+        data = await mapResponseBody(response.mapping, data);
+      }
+      if (response?.validation) {
+        const parsedResponse = await response.validation.safeParseAsync(data);
+        if (!parsedResponse.success) {
+          throw getProviderValidationErrorResponse(
+            fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+          );
         }
         data = parsedResponse.data;
       }
@@ -263,11 +303,15 @@ export async function createApplication(): Promise<Express> {
     );
     router.use(endPoint, handler);
     if (meta.openapi) {
-      openapiPaths[endPoint] = { ...openapiPaths[endPoint], ...meta.openapi };
+      const endPointOpenapi = formatEndPoint(endPoint);
+      openapiPaths[endPointOpenapi] = {
+        ...openapiPaths[endPointOpenapi],
+        ...meta.openapi,
+      };
     }
   }
   await configureOpenapi(router, openapiPaths);
   server.use(config.prefix ?? '/', router);
   await internalConfiguration(server);
-  return server.use(notFoundMiddleware());
+  return server.use(notFoundMiddleware()).use(errorMiddleware());
 }

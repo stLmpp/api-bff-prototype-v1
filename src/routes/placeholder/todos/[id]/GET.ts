@@ -1,30 +1,44 @@
-import { type ApiConfig } from '../../../../api-config/api-config.js';
-import { fixed } from '../../../../api-config/fixed.js';
-import { forward } from '../../../../api-config/forward.js';
-import { fromHeader } from '../../../../api-config/from-header.js';
-import { fromQuery } from '../../../../api-config/from-query.js';
+import { z } from 'zod';
 
-export default {
+import { apiConfig } from '../../../../api-config/api-config.js';
+import { fixed } from '../../../../api-config/fixed.js';
+
+export default apiConfig({
   host: 'jsonplaceholder.typicode.com',
   path: 'todos/:id',
-  mapping: {
-    in: {
+  request: {
+    validation: {
+      query: z.object({
+        teste: z.string(),
+        id: z.string(),
+        'from-another': z.string(),
+      }),
+      params: z.object({
+        id: z.string(),
+      }),
+      headers: z.object({
+        authorization: z.string(),
+        'x-custom': z.string(),
+      }),
+    },
+    mapping: {
       params: {
-        id: forward(),
+        id: 'id',
       },
       headers: {
-        'x-api-bff': fixed(true),
-        authorization: forward(),
+        'x-api-bff': fixed('true'),
+        authorization: 'authorization',
       },
       query: {
-        teste: forward(),
+        teste: 'teste',
         teste2: fixed('fixed value'),
         teste3: 'from-another',
+        pathId: { param: 'id' },
       },
       body: {
-        id: fromQuery('id'),
-        auth: fromHeader((param) => param.authorization),
+        id: { query: 'id' },
+        auth: { header: (headers) => headers.authorization },
       },
     },
   },
-} satisfies ApiConfig;
+});

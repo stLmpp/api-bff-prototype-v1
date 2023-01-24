@@ -2,39 +2,43 @@ import { StatusCodes } from 'http-status-codes';
 import { type OperationObject } from 'openapi3-ts';
 
 import { type ApiConfig } from '../api-config/api-config.js';
+import { uniq } from '../uniq.js';
 
 import { getContentSchemaFromZod } from './get-content-schema-from-zod.js';
+import { getErrorSchema } from './get-error-schema.js';
 import { getParameters } from './get-parameters.js';
 
 export function getOperation(apiConfig: ApiConfig): OperationObject {
-  const { mapping, openapi } = apiConfig;
+  const { request, response, description, summary } = apiConfig;
   const operation: OperationObject = {
-    description: openapi?.description,
-    summary: openapi?.summary,
+    description,
+    summary,
     responses: {},
     parameters: getParameters(apiConfig),
+    tags: apiConfig.tags,
   };
-  if (typeof mapping?.in?.body === 'object') {
+  if (request?.mapping?.body && typeof request.mapping.body === 'object') {
     operation.requestBody = {
       content: { 'application/json': { schema: { type: 'object' } } },
     };
   }
-  if (openapi?.request?.body) {
-    operation.requestBody = getContentSchemaFromZod(openapi.request.body);
+  if (request?.validation?.body) {
+    operation.requestBody = getContentSchemaFromZod(request.validation.body);
   }
-  if (openapi?.response?.ok) {
+  if (response?.validation) {
     operation.responses[StatusCodes.OK] = getContentSchemaFromZod(
-      openapi.response.ok
+      response.validation
     );
   }
-  if (openapi?.response?.errors?.length) {
-    for (const response of openapi.response.errors) {
-      if (response.body) {
-        operation.responses[response.statusCode] = getContentSchemaFromZod(
-          response.body
-        );
-      }
-    }
+  const possibleErrors = uniq([
+    ...(response?.possibleErrors ?? []),
+    StatusCodes.MISDIRECTED_REQUEST,
+    StatusCodes.INTERNAL_SERVER_ERROR,
+    StatusCodes.BAD_REQUEST,
+  ]).sort((statusA, statusB) => statusA - statusB);
+  for (const statusCode of possibleErrors) {
+    operation.responses[statusCode] = getErrorSchema(statusCode);
   }
+
   return operation;
 }

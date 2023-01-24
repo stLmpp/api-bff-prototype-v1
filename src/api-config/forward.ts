@@ -1,3 +1,3 @@
-export function forward(): (value: unknown) => unknown {
+export function forward<T>(): (value: T) => T {
   return (value) => value;
 }

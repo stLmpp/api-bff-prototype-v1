@@ -8,8 +8,8 @@ import { ZodObject } from 'zod';
 
 import {
   type ApiConfig,
-  type ApiConfigMappingIn,
-  type ApiConfigOpenapiRequest,
+  type ApiConfigRequestMapping,
+  type ApiConfigRequestValidation,
 } from '../api-config/api-config.js';
 import { type Entries } from '../entries.js';
 import { type ParamType } from '../param-type.js';
@@ -25,14 +25,14 @@ const paramTypeToSwaggerParameterTypeMap = {
   query: 'query',
 } satisfies Record<Exclude<ParamType, 'body'>, ParameterLocation>;
 
-function setParametersFromMappingIn(
-  mapping: ApiConfigMappingIn | undefined,
+function setParametersFromRequestMapping(
+  mapping: ApiConfigRequestMapping | undefined,
   parameters: Parameters
 ): void {
   if (!mapping) {
     return;
   }
-  const entries = Object.entries(mapping) as Entries<ApiConfigMappingIn>;
+  const entries = Object.entries(mapping) as Entries<ApiConfigRequestMapping>;
   for (const [key, value] of entries) {
     if (key === 'body') {
       continue;
@@ -51,14 +51,16 @@ function setParametersFromMappingIn(
   }
 }
 
-function setParameterFromOpenapiRequest(
-  request: ApiConfigOpenapiRequest | undefined,
+function setParametersFromRequestValidation(
+  request: ApiConfigRequestValidation | undefined,
   parameters: Parameters
 ): void {
   if (!request) {
     return;
   }
-  const entries = Object.entries(request) as Entries<ApiConfigOpenapiRequest>;
+  const entries = Object.entries(
+    request
+  ) as Entries<ApiConfigRequestValidation>;
   for (const [key, value] of entries) {
     if (key === 'body' || !(value instanceof ZodObject)) {
       continue;
@@ -90,8 +92,8 @@ export function getParameters(config: ApiConfig): ParameterObject[] {
     query: {},
     params: {},
   };
-  setParametersFromMappingIn(config.mapping?.in, parameters);
-  setParameterFromOpenapiRequest(config.openapi?.request, parameters);
+  setParametersFromRequestMapping(config.request?.mapping, parameters);
+  setParametersFromRequestValidation(config.request?.validation, parameters);
   const parametersSortPriority = {
     path: 1,
     query: 2,

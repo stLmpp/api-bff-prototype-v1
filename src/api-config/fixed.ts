@@ -1,3 +1,3 @@
-export function fixed(value: unknown): () => unknown {
+export function fixed<T>(value: T): () => T {
   return () => value;
 }

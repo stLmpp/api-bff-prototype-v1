@@ -4,7 +4,6 @@ import compression from 'compression';
 import express, {
   type Express,
   json,
-  type Request,
   type RequestHandler,
   type Response,
   Router,
@@ -15,12 +14,7 @@ import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
 import { type z, type ZodType } from 'zod';
 
-import {
-  type ApiConfigRequestMappingBody,
-  type ApiConfigRequestMappingOtherParams,
-  type ApiConfigRequestMappingParams,
-  ApiConfigSchema,
-} from './api-config/api-config.js';
+import { ApiConfigSchema } from './api-config/api-config.js';
 import { getCachingStrategy } from './caching/caching-resolver.js';
 import {
   type ConfigCaching,
@@ -31,11 +25,14 @@ import { ErrorCodes } from './error-codes.js';
 import { type ErrorResponse } from './error-response.js';
 import { formatHeaders } from './format-headers.js';
 import { formatQuery } from './format-query.js';
+import { getProviderValidationErrorResponse } from './get-provider-validation-error-response.js';
 import { getHttpClient } from './http-client/get-http-client.js';
 import { type HttpClientRequestOptions } from './http-client/http-client.js';
 import { methodHasBody } from './http-client/method-has-body.js';
 import { internalConfiguration } from './internal-configuration.js';
-import { isRecord } from './is-record.js';
+import { mapRequestBody } from './map-request-body.js';
+import { mapRequestOtherParams } from './map-request-other-params.js';
+import { mapRequestParams } from './map-request-params.js';
 import { MethodSchema } from './method.js';
 import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
@@ -53,6 +50,7 @@ interface InitApiConfigResultMeta {
   openapi?: PathItemObject | null;
 }
 type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
+
 async function validateAndSendBadRequest<T, Z extends ZodType>({
   res,
   type,
@@ -71,99 +69,14 @@ async function validateAndSendBadRequest<T, Z extends ZodType>({
   if (!parsedData.success) {
     res.status(StatusCodes.BAD_REQUEST).send({
       status: StatusCodes.BAD_REQUEST,
+      statusText: getReasonPhrase(StatusCodes.BAD_REQUEST),
       errors: fromZodErrorToErrorResponseObjects(parsedData.error, type),
-      error: getReasonPhrase(StatusCodes.BAD_REQUEST),
       message: 'Invalid parameters', // TODO better error message
       code: ErrorCodes.BadRequest,
     } satisfies ErrorResponse);
     return null;
   }
   return parsedData.data;
-}
-
-async function mapRequestParams(
-  mapping: ApiConfigRequestMappingParams,
-  data: Record<string, string>,
-  req: Request
-): Promise<Record<string, string>> {
-  if (typeof mapping === 'function') {
-    return mapping(data, req);
-  }
-  const finalResult: Record<string, string> = {};
-  const promises: Promise<void>[] = [];
-  for (const [key, value] of Object.entries(mapping)) {
-    const dataValue = data[key];
-    if (typeof value === 'function') {
-      promises.push(
-        Promise.resolve(value(dataValue, req)).then((mappedValue) => {
-          finalResult[key] = mappedValue;
-        })
-      );
-    } else {
-      finalResult[key] = dataValue;
-    }
-  }
-  await Promise.all(promises);
-  return finalResult;
-}
-
-async function mapRequestOtherParams(
-  mapping: ApiConfigRequestMappingOtherParams,
-  data: Record<string, string>,
-  req: Request
-): Promise<Record<string, string>> {
-  if (typeof mapping === 'function') {
-    return data;
-  }
-  const finalResult: Record<string, string> = {};
-  const promises: Promise<void>[] = [];
-  for (const [key, value] of Object.entries(mapping)) {
-    const dataValue = data[key];
-    if (typeof value === 'function') {
-      promises.push(
-        Promise.resolve(value(dataValue, req)).then((mappedValue) => {
-          if (typeof mappedValue !== 'undefined') {
-            finalResult[key] = mappedValue;
-          }
-        })
-      );
-    } else {
-      finalResult[key] = dataValue;
-    }
-  }
-  await Promise.all(promises);
-  return finalResult;
-}
-
-async function mapRequestBody(
-  mapping: ApiConfigRequestMappingBody,
-  data: unknown,
-  req: Request
-): Promise<unknown> {
-  if (typeof mapping === 'function') {
-    return mapping(data, req);
-  }
-  if (!isRecord(data)) {
-    return data;
-  }
-  const finalResult: Record<string, unknown> = {};
-  const promises: Promise<void>[] = [];
-  for (const [key, value] of Object.entries(mapping)) {
-    const dataValue = data[key];
-    if (typeof value === 'function') {
-      promises.push(
-        Promise.resolve(value(dataValue, req)).then((mappedValue) => {
-          if (typeof mappedValue !== 'undefined') {
-            finalResult[key] = mappedValue;
-          }
-        })
-      );
-    } else if (typeof dataValue !== 'undefined') {
-      finalResult[key] = dataValue;
-    }
-  }
-  await Promise.all(promises);
-  return finalResult;
 }
 
 async function initApiConfig(path: string): Promise<InitApiConfigResult> {
@@ -182,8 +95,17 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   }
   const parsedApiConfig = await ApiConfigSchema.safeParseAsync(apiConfig);
   if (!parsedApiConfig.success) {
-    // TODO better error message
-    throw new Error(`File ${path} does not contain valid configuration`);
+    const errors = fromZodErrorToErrorResponseObjects(
+      parsedApiConfig.error,
+      'body'
+    );
+    throw new Error(
+      `File ${path} does not contain valid configuration.\n` +
+        `Errors:\n` +
+        `${errors
+          .map((error) => `- "${error.path}" ${error.message}`)
+          .join('\n')}`
+    );
   }
   const {
     host,
@@ -309,6 +231,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       ) satisfies ConfigCaching;
       let cacheUsed = false;
       // TODO define what will compose the cache key
+      // TODO the keys will be defined by the user after the config.json refactor
+      // TODO change api-bff.json to bff-config.ts
       const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
         authorization: headers.authorization,
       })}`;
@@ -332,8 +256,9 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         // TODO improve error message
         res.status(httpResponse.status).send({
           status: httpResponse.status,
-          message: httpResponse.statusText,
+          statusText: httpResponse.statusText,
           code: ErrorCodes.ProviderError,
+          message: 'Improve this message',
         } satisfies ErrorResponse);
         return;
       }
@@ -343,17 +268,13 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           data
         );
         if (!parsedResponse.success) {
-          const error: ErrorResponse = {
-            error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
-            status: StatusCodes.MISDIRECTED_REQUEST,
-            message: 'The response from the server has data validation errors',
-            errors: fromZodErrorToErrorResponseObjects(
-              parsedResponse.error,
-              'body'
-            ),
-            code: ErrorCodes.ResponseValidationError,
-          };
-          res.status(StatusCodes.MISDIRECTED_REQUEST).send(error);
+          res
+            .status(StatusCodes.MISDIRECTED_REQUEST)
+            .send(
+              getProviderValidationErrorResponse(
+                fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+              )
+            );
           return;
         }
         data = parsedResponse.data;
@@ -364,17 +285,13 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       if (response?.validation) {
         const parsedResponse = await response.validation.safeParseAsync(data);
         if (!parsedResponse.success) {
-          const error: ErrorResponse = {
-            error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
-            status: StatusCodes.MISDIRECTED_REQUEST,
-            message: 'The response from the server has data validation errors',
-            errors: fromZodErrorToErrorResponseObjects(
-              parsedResponse.error,
-              'body'
-            ),
-            code: ErrorCodes.ResponseValidationError,
-          };
-          res.status(StatusCodes.MISDIRECTED_REQUEST).send(error);
+          res
+            .status(StatusCodes.MISDIRECTED_REQUEST)
+            .send(
+              getProviderValidationErrorResponse(
+                fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+              )
+            );
           return;
         }
         data = parsedResponse.data;

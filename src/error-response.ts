@@ -19,6 +19,7 @@ export const ErrorResponseStatusCodeSchema = z
 
 export const ErrorResponseSchema = z.object({
   status: ErrorResponseStatusCodeSchema,
+  statusText: z.string(),
   errors: z.array(ErrorResponseErrorObjectSchema).optional(),
   error: z.string().optional(),
   code: z.string(),

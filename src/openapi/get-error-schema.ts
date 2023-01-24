@@ -1,5 +1,5 @@
 import { getReasonPhrase, type StatusCodes } from 'http-status-codes';
-import { type ResponseObject } from 'openapi3-ts/src/model/OpenApi.js';
+import { type ResponseObject } from 'openapi3-ts';
 
 import { ErrorResponseSchema } from '../error-response.js';
 
@@ -27,5 +27,5 @@ export function getErrorSchema(status: StatusCodes): ResponseObject {
         },
       },
     },
-  }
+  };
 }

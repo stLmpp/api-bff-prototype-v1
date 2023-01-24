@@ -2,9 +2,10 @@ import { StatusCodes } from 'http-status-codes';
 import { type OperationObject } from 'openapi3-ts';
 
 import { type ApiConfig } from '../api-config/api-config.js';
-import { ErrorResponseSchema } from '../error-response.js';
+import { uniq } from '../uniq.js';
 
 import { getContentSchemaFromZod } from './get-content-schema-from-zod.js';
+import { getErrorSchema } from './get-error-schema.js';
 import { getParameters } from './get-parameters.js';
 
 export function getOperation(apiConfig: ApiConfig): OperationObject {
@@ -14,6 +15,7 @@ export function getOperation(apiConfig: ApiConfig): OperationObject {
     summary,
     responses: {},
     parameters: getParameters(apiConfig),
+    tags: apiConfig.tags,
   };
   if (request?.mapping?.body && typeof request.mapping.body === 'object') {
     operation.requestBody = {
@@ -28,12 +30,14 @@ export function getOperation(apiConfig: ApiConfig): OperationObject {
       response.validation
     );
   }
-  if (response?.possibleErrors?.length) {
-    const schema = getContentSchemaFromZod(ErrorResponseSchema);
-    // TODO add status code fixed
-    for (const statusCode of response.possibleErrors) {
-      operation.responses[statusCode] = schema;
-    }
+  const possibleErrors = uniq([
+    ...(response?.possibleErrors ?? []),
+    StatusCodes.MISDIRECTED_REQUEST,
+    StatusCodes.INTERNAL_SERVER_ERROR,
+    StatusCodes.BAD_REQUEST,
+  ]).sort((statusA, statusB) => statusA - statusB);
+  for (const statusCode of possibleErrors) {
+    operation.responses[statusCode] = getErrorSchema(statusCode);
   }
 
   return operation;

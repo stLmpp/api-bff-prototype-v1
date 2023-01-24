@@ -12,6 +12,7 @@ export default apiConfig({
   path: 'todos/:id',
   summary: 'POST TODOS SUMMARY',
   description: 'POST TODOS',
+  tags: ['Tag1'],
   request: {
     validation: {
       body: schema(

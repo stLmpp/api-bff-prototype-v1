@@ -8,6 +8,7 @@
     "build": "tsx scripts/build.ts",
     "dev": "tsx scripts/watch.ts"
   },
+  "sideEffects": false,
   "keywords": [],
   "author": "",
   "license": "ISC",

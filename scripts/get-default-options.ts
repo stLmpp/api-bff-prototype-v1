@@ -2,8 +2,6 @@ import { type BuildOptions } from 'esbuild';
 import { nodeExternalsPlugin } from 'esbuild-node-externals';
 import fastGlob from 'fast-glob';
 
-import { typecheckingPlugin } from './typechecking-plugin.js';
-
 export async function getDefaultOptions() {
   const files = await fastGlob(['src/routes/**/*.{ts,mts}']);
   return {
@@ -16,6 +14,6 @@ export async function getDefaultOptions() {
     define: {
       PROD: 'true',
     },
-    plugins: [nodeExternalsPlugin(), typecheckingPlugin()],
+    plugins: [nodeExternalsPlugin()],
   } satisfies BuildOptions;
 }

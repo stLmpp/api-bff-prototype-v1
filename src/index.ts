@@ -329,41 +329,19 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         if (cacheUsed) {
           return;
         }
-        let errorResponse: unknown;
-        try {
-          errorResponse = await httpResponse
-            .json()
-            .catch(() => httpResponse.text())
-            .catch(() => null);
-        } catch (error) {
-          console.log(error);
-          errorResponse = null;
-        }
-        const validationProviderError =
-          response?.validationProvider?.errors?.[httpResponse.status] ??
-          response?.validationProvider?.errors?.default;
-        if (validationProviderError) {
-          // TODO validate provider error
-        }
-        const mappingOutError =
-          response?.mapping?.errors?.[httpResponse.status] ??
-          response?.mapping?.errors?.default;
-        if (mappingOutError) {
-          errorResponse = mappingOutError(errorResponse);
-        }
-        const validationError =
-          response?.validation?.errors?.[httpResponse.status] ??
-          response?.validation?.errors?.default;
-        if (validationError) {
-          // TODO validate error
-        }
-        res.status(httpResponse.status).send(errorResponse);
+        // TODO improve error message
+        res.status(httpResponse.status).send({
+          status: httpResponse.status,
+          message: httpResponse.statusText,
+          code: ErrorCodes.ProviderError,
+        } satisfies ErrorResponse);
         return;
       }
       let data = await httpResponse.json();
-      if (response?.validationProvider?.ok) {
-        const parsedResponse =
-          await response.validationProvider.ok.safeParseAsync(data);
+      if (response?.providerValidation) {
+        const parsedResponse = await response.providerValidation.safeParseAsync(
+          data
+        );
         if (!parsedResponse.success) {
           const error: ErrorResponse = {
             error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),
@@ -380,13 +358,11 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         }
         data = parsedResponse.data;
       }
-      if (response?.mapping?.ok) {
+      if (response?.mapping) {
         // TODO mapping body out
       }
-      if (response?.validation?.ok) {
-        const parsedResponse = await response.validation.ok.safeParseAsync(
-          data
-        );
+      if (response?.validation) {
+        const parsedResponse = await response.validation.safeParseAsync(data);
         if (!parsedResponse.success) {
           const error: ErrorResponse = {
             error: getReasonPhrase(StatusCodes.MISDIRECTED_REQUEST),

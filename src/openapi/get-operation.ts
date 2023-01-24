@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
 import { type OperationObject } from 'openapi3-ts';
-import { type Entries } from 'type-fest';
 
 import { type ApiConfig } from '../api-config/api-config.js';
+import { ErrorResponseSchema } from '../error-response.js';
 
 import { getContentSchemaFromZod } from './get-content-schema-from-zod.js';
 import { getParameters } from './get-parameters.js';
@@ -23,20 +23,16 @@ export function getOperation(apiConfig: ApiConfig): OperationObject {
   if (request?.validation?.body) {
     operation.requestBody = getContentSchemaFromZod(request.validation.body);
   }
-  if (response?.validation?.ok) {
+  if (response?.validation) {
     operation.responses[StatusCodes.OK] = getContentSchemaFromZod(
-      response.validation.ok
+      response.validation
     );
   }
-  if (response?.validation?.errors) {
-    const entries = Object.entries(response.validation.errors) as Entries<
-      typeof response.validation.errors
-    >;
-    for (const [statusCode, schema] of entries) {
-      if (statusCode === 'default') {
-        continue;
-      }
-      operation.responses[statusCode] = getContentSchemaFromZod(schema);
+  if (response?.possibleErrors?.length) {
+    const schema = getContentSchemaFromZod(ErrorResponseSchema);
+    // TODO add status code fixed
+    for (const statusCode of response.possibleErrors) {
+      operation.responses[statusCode] = schema;
     }
   }
 

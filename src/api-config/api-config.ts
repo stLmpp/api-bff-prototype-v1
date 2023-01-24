@@ -1,4 +1,5 @@
 import { type Request } from 'express';
+import { type StatusCodes } from 'http-status-codes';
 import { type ConditionalKeys, type RequireExactlyOne } from 'type-fest';
 import {
   z,
@@ -23,11 +24,6 @@ const ApiConfigRequestValidationParams: ZodType<
 const ApiConfigRequestValidationOtherParams: ZodType<
   ZodObject<Record<string, ZodString | ZodOptional<ZodString>>>
 > = z.any();
-
-const ApiConfigValidationErrorsSchema = z.record(
-  z.union([ErrorResponseStatusCodeSchema, z.string()]),
-  ApiConfigValidationBody
-);
 
 const AnyPromiseSchema = z.union([z.any(), z.any().promise()]);
 
@@ -188,18 +184,13 @@ export type ApiConfigRequestMappingOtherParams = z.infer<
   typeof ApiConfigRequestMappingOtherParamsSchema
 >;
 
-const ApiConfigResponseMappingOkSchema = z.union([
+const ApiConfigResponseMapping = z.union([
   z.function().args(z.any()).returns(AnyPromiseSchema),
   z.record(
     KeySchema,
     z.union([KeySchema, z.function().args(z.any()).returns(AnyPromiseSchema)])
   ),
 ]);
-
-const ApiConfigResponseMappingErrorsSchema = z.record(
-  z.union([ErrorResponseStatusCodeSchema, z.string()]),
-  z.function().args(z.any()).returns(AnyPromiseSchema).optional()
-);
 
 const ApiConfigRequestMappingSchema = z.object({
   body: ApiConfigRequestMappingBodySchema.optional(),
@@ -234,24 +225,10 @@ export const ApiConfigSchema = z.object({
     .optional(),
   response: z
     .object({
-      validationProvider: z
-        .object({
-          ok: ApiConfigValidationBody.optional(),
-          errors: ApiConfigValidationErrorsSchema.optional(),
-        })
-        .optional(),
-      mapping: z
-        .object({
-          ok: ApiConfigResponseMappingOkSchema.optional(),
-          errors: ApiConfigResponseMappingErrorsSchema.optional(),
-        })
-        .optional(),
-      validation: z
-        .object({
-          ok: ApiConfigValidationBody.optional(),
-          errors: ApiConfigValidationErrorsSchema.optional(),
-        })
-        .optional(),
+      providerValidation: ApiConfigValidationBody.optional().optional(),
+      mapping: ApiConfigResponseMapping.optional(),
+      validation: ApiConfigValidationBody.optional().optional(),
+      possibleErrors: z.array(ErrorResponseStatusCodeSchema).optional(),
     })
     .optional(),
   caching: z
@@ -339,7 +316,7 @@ type RequestValidationMappingBody<Body, Params, Query, Headers> =
         }>
     >;
 
-type ResponseMappingOk<Body, OpenapiBody> =
+type ResponseMapping<Body, OpenapiBody> =
   | ((body: Body) => OpenapiBody)
   | {
       [K in keyof OpenapiBody]:
@@ -357,8 +334,8 @@ export function apiConfig<
   RequestValidationHeaders extends ZodObject<
     Record<string, ZodString | ZodOptional<ZodString>>
   >,
-  ResponseValidationProviderOk extends ZodType,
-  ResponseValidationOk extends ZodType
+  ResponseProviderValidation extends ZodType,
+  ResponseValidation extends ZodType
 >(
   config: Omit<ApiConfig, 'path' | 'request' | 'response'> & {
     path: Route;
@@ -400,30 +377,13 @@ export function apiConfig<
       };
     };
     response?: {
-      validationProvider?: {
-        ok?: ResponseValidationProviderOk;
-        errors?: {
-          [x: number]: ZodType;
-          default?: ZodType;
-        }; // TODO improve errors
-      };
-      mapping?: {
-        ok?: ResponseMappingOk<
-          z.infer<ResponseValidationProviderOk>,
-          z.infer<ResponseValidationOk>
-        >;
-        errors?: {
-          [x: number]: (body: unknown) => OrPromise<unknown>;
-          default?: (body?: unknown) => OrPromise<unknown>;
-        }; // TODO improve errors
-      };
-      validation?: {
-        ok?: ResponseValidationOk;
-        errors?: {
-          [x: number]: ZodType;
-          default?: ZodType;
-        }; // TODO improve errors
-      };
+      providerValidation?: ResponseProviderValidation;
+      mapping?: ResponseMapping<
+        z.infer<ResponseProviderValidation>,
+        z.infer<ResponseValidation>
+      >;
+      validation?: ResponseValidation;
+      possibleErrors?: StatusCodes[];
     };
   }
 ): ApiConfig {

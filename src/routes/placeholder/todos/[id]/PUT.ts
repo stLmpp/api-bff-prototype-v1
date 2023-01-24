@@ -50,14 +50,12 @@ export default apiConfig({
     },
   },
   response: {
-    validation: {
-      ok: z.object({
-        id: z.string(),
-      }),
-      errors: {
-        [StatusCodes.BAD_GATEWAY]: z.object({}),
-        [StatusCodes.INTERNAL_SERVER_ERROR]: z.object({}),
-      },
-    },
+    validation: z.object({
+      id: z.string(),
+    }),
+    possibleErrors: [
+      StatusCodes.BAD_GATEWAY,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    ],
   },
 });

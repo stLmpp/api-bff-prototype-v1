@@ -192,6 +192,8 @@ const ApiConfigResponseMapping = z.union([
   ),
 ]);
 
+export type ApiConfigResponseMapping = z.infer<typeof ApiConfigResponseMapping>;
+
 const ApiConfigRequestMappingSchema = z.object({
   body: ApiConfigRequestMappingBodySchema.optional(),
   params: ApiConfigRequestMappingParamsSchema.optional(),

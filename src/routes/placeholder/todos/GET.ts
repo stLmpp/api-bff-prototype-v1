@@ -14,13 +14,15 @@ export default apiConfig({
         completed: z.boolean(),
       })
     ),
-    mapping: (body) => body,
+    mapping: (items) =>
+      items.map((item) => ({ ...item, isBffResponse: 'yes' })),
     validation: z.array(
       z.object({
         userId: z.number(),
         id: z.number(),
         title: z.string(),
         completed: z.boolean(),
+        isBffResponse: z.string(),
       })
     ),
   },

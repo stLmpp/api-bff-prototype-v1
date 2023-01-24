@@ -5,12 +5,11 @@ import express, {
   type Express,
   json,
   type RequestHandler,
-  type Response,
   Router,
 } from 'express';
 import fastGlob from 'fast-glob';
 import helmet from 'helmet';
-import { getReasonPhrase, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
 import { type z, type ZodType } from 'zod';
 
@@ -22,7 +21,8 @@ import {
 } from './config/config-caching.js';
 import { getConfig } from './config/config.js';
 import { ErrorCodes } from './error-codes.js';
-import { type ErrorResponse } from './error-response.js';
+import { errorMiddleware } from './error-middleware.js';
+import { ErrorResponse } from './error-response.js';
 import { formatHeaders } from './format-headers.js';
 import { formatQuery } from './format-query.js';
 import { getProviderValidationErrorResponse } from './get-provider-validation-error-response.js';
@@ -33,6 +33,7 @@ import { internalConfiguration } from './internal-configuration.js';
 import { mapRequestBody } from './map-request-body.js';
 import { mapRequestOtherParams } from './map-request-other-params.js';
 import { mapRequestParams } from './map-request-params.js';
+import { mapResponseBody } from './map-response-body.js';
 import { MethodSchema } from './method.js';
 import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
@@ -52,7 +53,6 @@ interface InitApiConfigResultMeta {
 type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
 
 async function validateAndSendBadRequest<T, Z extends ZodType>({
-  res,
   type,
   schema,
   data,
@@ -60,21 +60,18 @@ async function validateAndSendBadRequest<T, Z extends ZodType>({
   data: T;
   schema?: Z;
   type: ParamType;
-  res: Response;
-}): Promise<T | z.infer<Z> | null> {
+}): Promise<T | z.infer<Z>> {
   if (!schema) {
     return data;
   }
   const parsedData = await schema.safeParseAsync(data);
   if (!parsedData.success) {
-    res.status(StatusCodes.BAD_REQUEST).send({
+    throw new ErrorResponse({
       status: StatusCodes.BAD_REQUEST,
-      statusText: getReasonPhrase(StatusCodes.BAD_REQUEST),
       errors: fromZodErrorToErrorResponseObjects(parsedData.error, type),
       message: 'Invalid parameters', // TODO better error message
       code: ErrorCodes.BadRequest,
-    } satisfies ErrorResponse);
-    return null;
+    });
   }
   return parsedData.data;
 }
@@ -127,28 +124,21 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         next();
         return;
       }
+      res.setHeader('x-api-bff', 'true');
       let params = await validateAndSendBadRequest({
-        res,
         data: req.params,
         schema: request?.validation?.params,
         type: 'params',
       });
-      if (!params) {
-        return;
-      }
       if (request?.mapping?.params) {
         params = await mapRequestParams(request.mapping.params, params, req);
       }
       const formattedQuery = formatQuery(req.query);
       const parsedQuery = await validateAndSendBadRequest({
-        res,
         data: formattedQuery,
         type: 'query',
         schema: request?.validation?.query,
       });
-      if (!parsedQuery) {
-        return;
-      }
       let query: Record<string, string> = {};
       if (request?.mapping?.query) {
         query = formatQuery(parsedQuery);
@@ -161,14 +151,10 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
 
       const formattedHeaders = formatHeaders(req.headers);
       const parsedHeaders = await validateAndSendBadRequest({
-        res,
         data: formattedHeaders,
         type: 'headers',
         schema: request?.validation?.headers,
       });
-      if (!parsedHeaders) {
-        return;
-      }
       let headers: Record<string, string> = {};
       if (request?.mapping?.headers) {
         headers = await mapRequestOtherParams(
@@ -180,14 +166,10 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       let body: unknown | null = null;
       if (methodHasBody(method)) {
         const parsedBody = await validateAndSendBadRequest({
-          res,
           data: req.body,
           schema: request?.validation?.body,
           type: 'body',
         });
-        if (req.body && !parsedBody) {
-          return;
-        }
         if (request?.mapping?.body) {
           body = await mapRequestBody(request.mapping.body, parsedBody, req);
         }
@@ -256,13 +238,11 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           return;
         }
         // TODO improve error message
-        res.status(httpResponse.status).send({
+        throw new ErrorResponse({
           status: httpResponse.status,
-          statusText: httpResponse.statusText,
           code: ErrorCodes.ProviderError,
           message: 'Improve this message',
-        } satisfies ErrorResponse);
-        return;
+        });
       }
       let data = await httpResponse.json();
       if (response?.providerValidation) {
@@ -270,31 +250,21 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           data
         );
         if (!parsedResponse.success) {
-          res
-            .status(StatusCodes.MISDIRECTED_REQUEST)
-            .send(
-              getProviderValidationErrorResponse(
-                fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
-              )
-            );
-          return;
+          throw getProviderValidationErrorResponse(
+            fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+          );
         }
         data = parsedResponse.data;
       }
       if (response?.mapping) {
-        // TODO mapping body out
+        data = await mapResponseBody(response.mapping, data);
       }
       if (response?.validation) {
         const parsedResponse = await response.validation.safeParseAsync(data);
         if (!parsedResponse.success) {
-          res
-            .status(StatusCodes.MISDIRECTED_REQUEST)
-            .send(
-              getProviderValidationErrorResponse(
-                fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
-              )
-            );
-          return;
+          throw getProviderValidationErrorResponse(
+            fromZodErrorToErrorResponseObjects(parsedResponse.error, 'body')
+          );
         }
         data = parsedResponse.data;
       }
@@ -343,5 +313,5 @@ export async function createApplication(): Promise<Express> {
   await configureOpenapi(router, openapiPaths);
   server.use(config.prefix ?? '/', router);
   await internalConfiguration(server);
-  return server.use(notFoundMiddleware());
+  return server.use(notFoundMiddleware()).use(errorMiddleware());
 }

@@ -20,6 +20,7 @@ export async function internalConfiguration(app: Express): Promise<Express> {
           ttl: 0,
           type: cachingStrategy.type(),
           path: caching.path,
+          keyComposer: () => '',
         })
       )
     );

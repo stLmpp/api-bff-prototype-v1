@@ -1,23 +1,26 @@
 import { z } from 'zod';
 
+import { getHttpClient } from '../http-client/get-http-client.js';
+import { HttpClientTypeSchema } from '../http-client/http-client-type.schema.js';
+import { HttpClient } from '../http-client/http-client.js';
 import { fromZodErrorToErrorResponseObjects } from '../zod-error-formatter.js';
 
 import { ConfigCachingSchema } from './config-caching.js';
 import { ConfigOpenapiSchema } from './config-openapi.js';
-import { zPossibleEnv } from './env.js';
 
 const ConfigSchema = z.object(
   {
-    prefix: zPossibleEnv
-      .string(z.string())
+    prefix: z
+      .string()
       .optional()
       .transform((prefix) => prefix?.replace(/^(?!\/)/, '/') ?? ''),
     caching: ConfigCachingSchema.optional(),
     openapi: ConfigOpenapiSchema.optional(),
-    httpClient: zPossibleEnv
-      .string(z.union([z.literal('got'), z.literal('axios')]))
+    httpClient: z
+      .union([HttpClientTypeSchema, z.instanceof(HttpClient)])
       .optional()
-      .default('got'),
+      .default('got')
+      .transform((type) => getHttpClient(type)),
   },
   {
     required_error: 'API BFF Config file is required',

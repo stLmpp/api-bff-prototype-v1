@@ -25,7 +25,6 @@ import { ErrorResponse } from './error-response.js';
 import { formatHeaders } from './format-headers.js';
 import { formatQuery } from './format-query.js';
 import { getProviderValidationErrorResponse } from './get-provider-validation-error-response.js';
-import { getHttpClient } from './http-client/get-http-client.js';
 import { type HttpClientRequestOptions } from './http-client/http-client.js';
 import { methodHasBody } from './http-client/method-has-body.js';
 import { internalConfiguration } from './internal-configuration.js';
@@ -206,7 +205,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           cacheUsed = true;
         }
       }
-      const httpClient = await getHttpClient();
+      const httpClient = globalConfig.httpClient;
       const httpResponse = await httpClient.request(url, requestOptions);
       if (!httpResponse.ok) {
         if (cacheUsed) {

@@ -1,7 +1,9 @@
-import { getConfig } from '../config/config.js';
+import { type OrPromise } from '../or-promise.js';
 
 import { HttpClientAxios } from './http-client-axios.js';
+import { HttpClientFetch } from './http-client-fetch.js';
 import { HttpClientGot } from './http-client-got.js';
+import { type HttpClientType } from './http-client-type.schema.js';
 import { type HttpClient } from './http-client.js';
 
 let instance: HttpClient | null = null;
@@ -23,12 +25,17 @@ const factoryMap = {
       .catch((error) => {
         throw new Error(getErrorMessage('axios'), { cause: error });
       }),
-} as const;
+  fetch: () => new HttpClientFetch(),
+} satisfies Record<HttpClientType, () => OrPromise<HttpClient>>;
 
-export async function getHttpClient(): Promise<HttpClient> {
-  if (!instance) {
-    const { httpClient } = await getConfig();
-    instance = await factoryMap[httpClient]();
+export async function getHttpClient(
+  type: HttpClientType | HttpClient
+): Promise<HttpClient> {
+  if (instance) {
+    return instance;
   }
-  return instance;
+  if (typeof type === 'string') {
+    return (instance = await factoryMap[type]());
+  }
+  return (instance = type);
 }

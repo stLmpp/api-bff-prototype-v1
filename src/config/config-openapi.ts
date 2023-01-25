@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { zPossibleEnv } from './env.js';
-
 export const DEFAULT_OPENAPI_VALUES = {
   path: '/help',
   title: 'Api BFF',
@@ -9,45 +7,39 @@ export const DEFAULT_OPENAPI_VALUES = {
 } as const;
 
 const ConfigOpenapiObjectExternalDocsSchema = z.object({
-  url: zPossibleEnv.string(z.string().url()),
-  description: zPossibleEnv.string(z.string()).optional(),
+  url: z.string().url(),
+  description: z.string().optional(),
 });
 
 export const ConfigOpenapiObjectSchema = z.object({
-  path: zPossibleEnv
-    .string(z.string())
+  path: z
+    .string()
     .optional()
     .default(DEFAULT_OPENAPI_VALUES.path)
     .transform((path) => path?.replace(/^(?!\/)/, '/')),
-  title: zPossibleEnv
-    .string(z.string())
-    .optional()
-    .default(DEFAULT_OPENAPI_VALUES.title),
+  title: z.string().optional().default(DEFAULT_OPENAPI_VALUES.title),
   version: z
-    .union([
-      zPossibleEnv.string(z.string()),
-      zPossibleEnv.number(z.number()).transform((item) => String(item)),
-    ])
+    .union([z.string(), z.number().transform((item) => String(item))])
     .optional()
     .default(DEFAULT_OPENAPI_VALUES.version),
-  description: zPossibleEnv.string(z.string()).optional(),
+  description: z.string().optional(),
   contact: z
     .object({
-      url: zPossibleEnv.string(z.string()).optional(),
-      name: zPossibleEnv.string(z.string()).optional(),
-      email: zPossibleEnv.string(z.string().email()).optional(),
+      url: z.string().optional(),
+      name: z.string().optional(),
+      email: z.string().email().optional(),
     })
     .optional(),
-  termsOfService: zPossibleEnv.string(z.string()).optional(),
+  termsOfService: z.string().optional(),
   license: z.object({
-    name: zPossibleEnv.string(z.string()),
-    url: zPossibleEnv.string(z.string()).optional(),
+    name: z.string(),
+    url: z.string().optional(),
   }),
   tags: z
     .array(
       z.object({
-        name: zPossibleEnv.string(z.string()),
-        description: zPossibleEnv.string(z.string()).optional(),
+        name: z.string(),
+        description: z.string().optional(),
         externalDocs: ConfigOpenapiObjectExternalDocsSchema.optional(),
       })
     )
@@ -57,8 +49,8 @@ export const ConfigOpenapiObjectSchema = z.object({
 });
 
 export const ConfigOpenapiSchema = z.union([
-  zPossibleEnv
-    .boolean(z.boolean())
+  z
+    .boolean()
     .transform(
       (openapi) => openapi && (DEFAULT_OPENAPI_VALUES as ConfigOpenapiObject)
     ),

@@ -184,16 +184,22 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
               type: caching?.type ?? globalConfig.caching?.type ?? 'memory',
               path: ConfigCachingPathSchema.parse(globalConfig.caching?.path),
               ttl: caching?.ttl ?? globalConfig.caching?.ttl,
+              keyComposer:
+                caching?.keyComposer ??
+                globalConfig.caching?.keyComposer ??
+                (() => ''),
             }
-          : { type: 'memory', path: '' }
+          : { type: 'memory', path: '', keyComposer: () => '' }
       ) satisfies ConfigCaching;
       let cacheUsed = false;
-      // TODO define what will compose the cache key
-      // TODO the keys will be defined by the user after the config.json refactor
-      // TODO change api-bff.json to bff-config.ts
-      const cacheKey = `${url.toString()};;;;meta=${JSON.stringify({
-        authorization: headers.authorization,
-      })}`;
+      const cacheKey = newCaching.keyComposer({
+        url,
+        query,
+        params,
+        headers,
+        body,
+        method,
+      });
       const cachingStrategy = getCachingStrategy(newCaching.type!);
       if (shouldCache) {
         const cachedValue = await cachingStrategy

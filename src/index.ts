@@ -43,7 +43,7 @@ import { fromZodErrorToErrorResponseObjects } from './zod-error-formatter.js';
 
 const EXTENSION = 'js';
 const DIST = 'dist';
-const ROUTES = `${DIST}/routes`;
+const ROUTES = `${DIST}/src/routes`;
 
 interface InitApiConfigResultMeta {
   method: string;

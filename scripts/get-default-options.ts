@@ -7,7 +7,7 @@ import { typecheckingPlugin } from './typechecking-plugin.js';
 export async function getDefaultOptions() {
   const files = await fastGlob(['src/routes/**/*.{ts,mts}']);
   return {
-    entryPoints: ['src/main.ts', ...files],
+    entryPoints: ['src/main.ts', ...files, 'api-bff.config.ts'],
     platform: 'node',
     outdir: 'dist',
     format: 'esm',

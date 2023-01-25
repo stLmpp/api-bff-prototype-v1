@@ -22,7 +22,7 @@ const devPlugin = {
         return;
       }
       console.log('Build finished, starting program');
-      nodeProgram = spawn('node', ['dist/main.js'], {
+      nodeProgram = spawn('node', ['dist/src/main.js'], {
         env: process.env,
         stdio: 'inherit',
       });

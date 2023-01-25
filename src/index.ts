@@ -11,7 +11,6 @@ import fastGlob from 'fast-glob';
 import helmet from 'helmet';
 import { StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
-import { type z, type ZodType } from 'zod';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
 import { getCachingStrategy } from './caching/caching-resolver.js';
@@ -39,7 +38,7 @@ import { notFoundMiddleware } from './not-found-middleware.js';
 import { configureOpenapi } from './openapi/configure-openapi.js';
 import { formatEndPoint } from './openapi/format-end-point.js';
 import { getOperation } from './openapi/get-operation.js';
-import { type ParamType } from './param-type.js';
+import { validateParams } from './validate-params.js';
 import { fromZodErrorToErrorResponseObjects } from './zod-error-formatter.js';
 
 const EXTENSION = 'js';
@@ -51,30 +50,6 @@ interface InitApiConfigResultMeta {
   openapi?: PathItemObject | null;
 }
 type InitApiConfigResult = [string, RequestHandler, InitApiConfigResultMeta];
-
-async function validateAndSendBadRequest<T, Z extends ZodType>({
-  type,
-  schema,
-  data,
-}: {
-  data: T;
-  schema?: Z;
-  type: ParamType;
-}): Promise<T | z.infer<Z>> {
-  if (!schema) {
-    return data;
-  }
-  const parsedData = await schema.safeParseAsync(data);
-  if (!parsedData.success) {
-    throw new ErrorResponse({
-      status: StatusCodes.BAD_REQUEST,
-      errors: fromZodErrorToErrorResponseObjects(parsedData.error, type),
-      message: 'Invalid parameters', // TODO better error message
-      code: ErrorCodes.BadRequest,
-    });
-  }
-  return parsedData.data;
-}
 
 async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const globalConfig = await getConfig();
@@ -125,7 +100,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         return;
       }
       res.setHeader('x-api-bff', 'true');
-      let params = await validateAndSendBadRequest({
+      let params = await validateParams({
         data: req.params,
         schema: request?.validation?.params,
         type: 'params',
@@ -134,7 +109,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         params = await mapRequestParams(request.mapping.params, params, req);
       }
       const formattedQuery = formatQuery(req.query);
-      const parsedQuery = await validateAndSendBadRequest({
+      const parsedQuery = await validateParams({
         data: formattedQuery,
         type: 'query',
         schema: request?.validation?.query,
@@ -150,7 +125,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       }
 
       const formattedHeaders = formatHeaders(req.headers);
-      const parsedHeaders = await validateAndSendBadRequest({
+      const parsedHeaders = await validateParams({
         data: formattedHeaders,
         type: 'headers',
         schema: request?.validation?.headers,
@@ -165,7 +140,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
       }
       let body: unknown | null = null;
       if (methodHasBody(method)) {
-        const parsedBody = await validateAndSendBadRequest({
+        const parsedBody = await validateParams({
           data: req.body,
           schema: request?.validation?.body,
           type: 'body',
@@ -237,11 +212,11 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         if (cacheUsed) {
           return;
         }
-        // TODO improve error message
+        const error = await httpResponse.json().catch(() => null);
         throw new ErrorResponse({
           status: httpResponse.status,
           code: ErrorCodes.ProviderError,
-          message: 'Improve this message',
+          message: error?.message ?? error?.error ?? 'Provider internal error',
         });
       }
       let data = await httpResponse.json();

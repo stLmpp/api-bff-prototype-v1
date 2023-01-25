@@ -12,7 +12,7 @@ export function errorMiddleware() {
     } else {
       errorResponse = new ErrorResponse({
         code: ErrorCodes.InternalServerError,
-        message: 'Internal server error', // TODO better error message
+        message: error?.message ?? error?.error ?? 'Internal server error',
         status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }

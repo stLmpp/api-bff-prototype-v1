@@ -3,10 +3,14 @@ import {
   type ConfigCachingType,
 } from '../config/config-caching.js';
 
-export interface CachingStrategy {
-  get(key: string, options: ConfigCaching): Promise<unknown>;
-  set(key: string, value: unknown, options: ConfigCaching): Promise<void>;
-  invalidate(key: string, options: ConfigCaching): Promise<void>;
-  invalidateAll(options: ConfigCaching): Promise<void>;
-  type(): ConfigCachingType;
+export abstract class CachingStrategy {
+  abstract get(key: string, options: ConfigCaching): Promise<unknown>;
+  abstract set(
+    key: string,
+    value: unknown,
+    options: ConfigCaching
+  ): Promise<void>;
+  abstract invalidate(key: string, options: ConfigCaching): Promise<void>;
+  abstract invalidateAll(options: ConfigCaching): Promise<void>;
+  abstract type(): ConfigCachingType;
 }

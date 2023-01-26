@@ -3,8 +3,8 @@ import { defineConfig } from './src/config/config.js';
 export default defineConfig({
   prefix: 'api',
   caching: {
-    type: 'persistent',
     ttl: 15000,
+    strategy: 'memory',
   },
   openapi: {
     title: 'My API BFF',

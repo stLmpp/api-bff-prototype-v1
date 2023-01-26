@@ -4,9 +4,9 @@ import {
 } from '../config/config-caching.js';
 
 import { type CachingData } from './caching-data.js';
-import { type CachingStrategy } from './caching-strategy.js';
+import { CachingStrategy } from './caching-strategy.js';
 
-export class MemoryCaching implements CachingStrategy {
+export class MemoryCaching extends CachingStrategy {
   private readonly _cache = new Map<string, CachingData>();
 
   async get(key: string, { ttl }: ConfigCaching): Promise<unknown | undefined> {

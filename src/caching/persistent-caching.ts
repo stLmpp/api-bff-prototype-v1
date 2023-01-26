@@ -8,9 +8,9 @@ import {
 import { pathExists } from '../path-exists.js';
 
 import { type CachingData, CachingDataSchema } from './caching-data.js';
-import { type CachingStrategy } from './caching-strategy.js';
+import { CachingStrategy } from './caching-strategy.js';
 
-export class PersistentCaching implements CachingStrategy {
+export class PersistentCaching extends CachingStrategy {
   private async _createFolder(path: string): Promise<void> {
     const exists = await pathExists(path);
     if (exists) {

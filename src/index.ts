@@ -13,11 +13,7 @@ import { StatusCodes } from 'http-status-codes';
 import { type PathItemObject, type PathsObject } from 'openapi3-ts';
 
 import { ApiConfigSchema } from './api-config/api-config.js';
-import { getCachingStrategy } from './caching/caching-resolver.js';
-import {
-  type ConfigCaching,
-  ConfigCachingPathSchema,
-} from './config/config-caching.js';
+import { getApiCachingConfig } from './caching/get-api-caching-config.js';
 import { getConfig } from './config/config.js';
 import { ErrorCodes } from './error-codes.js';
 import { errorMiddleware } from './error-middleware.js';
@@ -27,7 +23,6 @@ import { formatQuery } from './format-query.js';
 import { getProviderValidationErrorResponse } from './get-provider-validation-error-response.js';
 import { type HttpClientRequestOptions } from './http-client/http-client.js';
 import { methodHasBody } from './http-client/method-has-body.js';
-import { internalConfiguration } from './internal-configuration.js';
 import { mapRequestBody } from './map-request-body.js';
 import { mapRequestOtherParams } from './map-request-other-params.js';
 import { mapRequestParams } from './map-request-params.js';
@@ -59,14 +54,16 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
   const regexExtension = new RegExp(`\\.${EXTENSION}$`);
   const method = MethodSchema.parse(reqPath.pop()!.replace(regexExtension, ''));
   const file = await import(join('file://', process.cwd(), path));
-  const apiConfig = file.default;
+  const unparsedApiConfig = file.default;
   const pathWithoutExtension = pathWithoutDist.replace(regexExtension, '');
-  if (!apiConfig) {
+  if (!unparsedApiConfig) {
     throw new Error(
       `File ${pathWithoutExtension} does not have a default export`
     );
   }
-  const parsedApiConfig = await ApiConfigSchema.safeParseAsync(apiConfig);
+  const parsedApiConfig = await ApiConfigSchema.safeParseAsync(
+    unparsedApiConfig
+  );
   if (!parsedApiConfig.success) {
     const errors = fromZodErrorToErrorResponseObjects(
       parsedApiConfig.error,
@@ -80,17 +77,12 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
           .join('\n')}`
     );
   }
-  const {
-    host,
-    path: pathname,
-    caching,
-    request,
-    response,
-  } = parsedApiConfig.data;
+  const apiConfig = parsedApiConfig.data;
+  const { host, path: pathname, request, response } = parsedApiConfig.data;
   const endPoint = reqPath.join('/');
-  const operation = globalConfig.openapi
-    ? getOperation(parsedApiConfig.data)
-    : null;
+  const operation = globalConfig.openapi ? getOperation(apiConfig) : null;
+  const { caching, hasCachingConfig } = await getApiCachingConfig(apiConfig);
+  const shouldCache = method === 'GET' && hasCachingConfig;
   return [
     endPoint,
     async (req, res, next) => {
@@ -175,24 +167,8 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         query,
         params,
       });
-      const hasCachingConfig =
-        caching !== false && (!!globalConfig.caching || !!caching);
-      const shouldCache = method === 'GET' && hasCachingConfig;
-      const newCaching = (
-        hasCachingConfig
-          ? {
-              type: caching?.type ?? globalConfig.caching?.type ?? 'memory',
-              path: ConfigCachingPathSchema.parse(globalConfig.caching?.path),
-              ttl: caching?.ttl ?? globalConfig.caching?.ttl,
-              keyComposer:
-                caching?.keyComposer ??
-                globalConfig.caching?.keyComposer ??
-                (() => ''),
-            }
-          : { type: 'memory', path: '', keyComposer: () => '' }
-      ) satisfies ConfigCaching;
       let cacheUsed = false;
-      const cacheKey = newCaching.keyComposer({
+      const cacheKey = caching.keyComposer({
         url,
         query,
         params,
@@ -200,10 +176,9 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         body,
         method,
       });
-      const cachingStrategy = getCachingStrategy(newCaching.type!);
       if (shouldCache) {
-        const cachedValue = await cachingStrategy
-          .get(cacheKey, newCaching)
+        const cachedValue = await caching.strategy
+          .get(cacheKey, caching)
           .catch(() => null);
         if (cachedValue != null) {
           console.log('Using cached value');
@@ -249,7 +224,7 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
         data = parsedResponse.data;
       }
       if (shouldCache) {
-        cachingStrategy.set(cacheKey, data, newCaching).catch(() => null);
+        caching.strategy.set(cacheKey, data, caching).catch(() => null);
         console.log('New value cached');
       }
       if (cacheUsed) {
@@ -264,7 +239,6 @@ async function initApiConfig(path: string): Promise<InitApiConfigResult> {
 export async function createApplication(): Promise<Express> {
   const server = express().use(helmet()).use(compression()).use(json());
   const config = await getConfig();
-  console.log('config', config);
   const middleGlob = '/**/{GET,POST,PUT,PATCH,DELETE}';
   const globPath = `${ROUTES}${middleGlob}.${EXTENSION}`;
   const paths = await fastGlob(globPath);
@@ -292,6 +266,5 @@ export async function createApplication(): Promise<Express> {
   }
   await configureOpenapi(router, openapiPaths);
   server.use(config.prefix ?? '/', router);
-  await internalConfiguration(server);
   return server.use(notFoundMiddleware()).use(errorMiddleware());
 }

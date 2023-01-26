@@ -13,6 +13,9 @@ export function getCachingStrategy(key: ConfigCachingType): CachingStrategy {
   return cachingInstances[key];
 }
 
+/**
+ * @public
+ */
 export function getAllCachingStrategies(): CachingStrategy[] {
   return Object.values(cachingInstances);
 }
